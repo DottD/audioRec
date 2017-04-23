@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="pattern-0" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse" viewBox="0 0 100 100">
+      <path d="M 0 0 L 50 0 L 50 100 L 0 100 Z" style="fill: black;"/>
+    </pattern>
+  </defs>
+  <g transform="matrix(0.084353, 0, 0, 0.084353, 2.91175, 2.91179)">
+    <rect x="205.551" y="46.578" width="88.897" height="406.843" rx="15.217" ry="15.217"/>
+    <rect x="51.467" y="48.303" width="88.897" height="406.843" rx="15.217" ry="15.217" transform="matrix(0, 1, -1, 0, 501.724479, 154.084512)"/>
+  </g>
+</svg>
