@@ -83,17 +83,20 @@ void Ui::AudioRecMainWin::on_ButtonCompute_clicked(){
 	/* Create an instance of AudioProcess for each file name found
 	 and associated it with the thread pool */
 	for (const QString& fileName: audioFiles){
-		AudioProcess* process = new AudioProcess(fileName);
-		connect(process, SIGNAL(processEnded(QString)), this, SLOT(on_OneProcessEnded(QString)));
+		QSharedPointer<QDir> dir(new QDir(fileName));
+		AudioProcess* process = new AudioProcess(); // deleted by QThreadPool when finished to work
+		process->setFileName(dir);
+		connect(process, SIGNAL(processEnded(QSharedPointer<QDir>)),
+				this, SLOT(on_OneProcessEnded(QSharedPointer<QDir>)));
 		QThreadPool::globalInstance()->start(process);
 	}
 }
 
-void Ui::AudioRecMainWin::on_OneProcessEnded(QString fileName){
+void Ui::AudioRecMainWin::on_OneProcessEnded(QSharedPointer<QDir> dir){
 	// Increase the processed counter
 	processed++;
 	// Extract file name without path and extension
-	QString completion = "Done: " + QDir(fileName).dirName() + " " + QString::number(processed) + "/" + QString::number(fileCount);
+	QString completion = "Done: " + dir->dirName() + " " + QString::number(processed) + "/" + QString::number(fileCount);
 	// Show completion
 	ui->LabelCompletion->setText(completion);
 }

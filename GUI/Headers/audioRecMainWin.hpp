@@ -1,6 +1,8 @@
 #ifndef audioRecMainWin_h
 #define audioRecMainWin_h
 
+#define QT_DEBUG_PLUGINS 1
+
 /* Libreria Qt */
 #include <QWidget>
 #include <QLineEdit>
@@ -10,6 +12,10 @@
 #include <QThread>
 #include <QMessageBox>
 #include <QRegExp>
+#include <QSharedPointer>
+#include <QDir>
+#include <QtMultimedia/QAudioDecoder>
+#include <QtMultimedia/QAudioBuffer>
 /* Libreria personale */
 #include <ui_audioRecMain.h>
 #include <Headers/AudioProcess.hpp>
@@ -58,7 +64,7 @@ private:
 	/** Handle the processEnded signal emitted by AudioProcess.
 	 This function updates the completion label every time an instance of AudioProcess finishes running.
 	 */
-	void on_OneProcessEnded(QString);
+	void on_OneProcessEnded(QSharedPointer<QDir>);
 };
 
 #endif // audioRecMainWin_h
