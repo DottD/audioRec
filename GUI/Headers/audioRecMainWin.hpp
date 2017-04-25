@@ -38,6 +38,17 @@ private:
 	int processed, /**< Number of audio files processed */
 	fileCount; /**< Total number of audio files to be processed */
 	
+	/** Returns the audio files contained in the given path.
+	 This function checks whether the input path is a directory or a file. In the former case
+	 the list of all audio files contained is returned, whereas in the latter case the
+	 file itself is returned. In case the path is invalid or no file supported format is found,
+	 an empty list is returned.
+	 @param [in] dir Input path (directory or audio file)
+	 @return The list of audio files found in the path.
+	 */
+	QSharedPointer<QStringList> listFilesInDir(QSharedPointer<QDir> dir,
+											   const bool& absolutePath = true);
+	
 	private slots:
 	/** Input browse button callback.
 	 Opens a file dialog when the input browse button is pressed.

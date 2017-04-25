@@ -10,6 +10,9 @@ fileCount(0) {
 	// Set the line edit as drag and drop receiver
 	ui->LineEditInput->setDragEnabled(true);
 	ui->LineEditOutput->setDragEnabled(true);
+	// Set icons for record scolling buttons
+	ui->ButtonPreviousRecord->setIcon(QIcon(":/48x48/Prev.png"));
+	ui->ButtonNextRecord->setIcon(QIcon(":/48x48/Successive.png"));
 }
 
 Ui::AudioRecMainWin::~AudioRecMainWin(){
@@ -53,6 +56,29 @@ void Ui::AudioRecMainWin::on_ButtonOutputBrowse_clicked(){
 	}
 }
 
+QSharedPointer<QStringList> Ui::AudioRecMainWin::listFilesInDir(QSharedPointer<QDir> dir,
+																const bool& absolutePath){
+	QSharedPointer<QStringList> audioFiles(new QStringList());
+	// Check if the path is a directory or a file
+	if (dir->exists()) { // The input path is a folder
+		// Append every found file to the output list of files
+		audioFiles->append(dir->entryList(supportedAudioFormats));
+		// Subsitute the absolute path to each file, if requested
+		if (absolutePath) for(QString& file: *audioFiles) file = dir->absoluteFilePath(file);
+	} else {
+		// Get the name of the file
+		QString fileName = dir->dirName();
+		// Move up if the folder path
+		if (!dir->cdUp()) throw std::runtime_error("Unable to cd upwards");
+		// Check the existence of the file and append its absolute path
+		if (dir->exists(fileName)) {
+			if (absolutePath) audioFiles->append(dir->absoluteFilePath(fileName));
+			else audioFiles->append(fileName);
+		}
+	}
+	return audioFiles; // possibly empty
+}
+
 void Ui::AudioRecMainWin::on_ButtonCompute_clicked(){
 	// Reset counters
 	fileCount = 0;
@@ -60,29 +86,16 @@ void Ui::AudioRecMainWin::on_ButtonCompute_clicked(){
 	// Check whether an input has been provided
 	if (ui->LineEditInput->text().isEmpty()) {popupError("Input not provided");return;}
 	// Extract the list of files (possibly one) to process
-	QDir inputPath(ui->LineEditInput->text());
-	QStringList audioFiles;
-	if (inputPath.exists()) {
-		// The input path is a folder
-		QStringList foundFileBaseNames = inputPath.entryList(supportedAudioFormats);
-		for (const QString& baseName: foundFileBaseNames) {
-			audioFiles.push_back(inputPath.absoluteFilePath(baseName));
-		}
-	} else if (inputPath.exists(ui->LineEditInput->text())) {
-		// The input path is a file
-		audioFiles.push_back(ui->LineEditInput->text());
-	} else {
-		popupError("Input is neither a folder nor a file");
-		return;
-	}
+	QSharedPointer<QDir> inputPath(new QDir(ui->LineEditInput->text()));
+	QSharedPointer<QStringList> audioFiles = listFilesInDir(inputPath);
 	// Check if there are file names in the list
-	if (audioFiles.isEmpty()) {popupError("List of audio files is empty");return;}
+	if (audioFiles->isEmpty()) {popupError("Input is neither a folder nor a file");return;}
 	// Store the number of files found
-	this->fileCount = audioFiles.count();
+	fileCount = audioFiles->count();
 	
 	/* Create an instance of AudioProcess for each file name found
 	 and associated it with the thread pool */
-	for (const QString& fileName: audioFiles){
+	for (const QString& fileName: *audioFiles){
 		QSharedPointer<QDir> dir(new QDir(fileName));
 		AudioProcess* process = new AudioProcess(); // deleted by QThreadPool when finished to work
 		process->setFileName(dir);
