@@ -24,6 +24,7 @@ namespace Ui {
 	class AudioRecMainWin;
 }
 
+/** Main widget that manages user interaction with the associated GUI. */
 class Ui::AudioRecMainWin : public QWidget
 {
 	Q_OBJECT
@@ -66,16 +67,67 @@ private:
 	 */
 	void on_ButtonCompute_clicked();
 	
+	/** Input line edit callback.
+	 This callback executes whenever the text in the widget changes. It automatically updates the
+	 combo box with the list of audio files found.
+	 */
+	void on_LineEditInput_textChanged(QString);
+	
+	/** Combo box for file choice callback.
+	 This callback is executed whenever the user click on a choice in the combo box.
+	 This function executes a thread to load the selected audio file, and then make the first record show.
+	 */
+	void on_ComboChooseFile_activated(QString);
+	
 	/** Display an error.
 	 Displays an error as a popup, with optional description, without quitting the graphical interface.
 	 */
-	void popupError(const QString& errorDescription = "");
-	
-	private slots:
+	void popupError(QString errorDescription = "");
+
 	/** Handle the processEnded signal emitted by AudioProcess.
 	 This function updates the completion label every time an instance of AudioProcess finishes running.
 	 */
 	void on_OneProcessEnded(QSharedPointer<QDir>);
+	
+	/** Slot to respond to parameters change */
+	void on_SpinRecLength_valueChanged(int val) {Application::setParameter(ParRecLength, val);}
+	
+	/** Slot to respond to parameters change */
+	void on_SpinMARad_valueChanged(int val) {Application::setParameter(ParMovAvgRadius, val);}
+	
+	/** Slot to respond to parameters change */
+	void on_SpinLowFreq_valueChanged(double val) {Application::setParameter(ParLowpassFreq, val);}
+	
+	/** Slot to respond to parameters change */
+	void on_SpinMinFreq_valueChanged(double val) {Application::setParameter(ParMinFilterFreq, val);}
+	
+	/** Slot to respond to parameters change */
+	void on_SpinMaxFreq_valueChanged(double val) {Application::setParameter(ParMaxFilterFreq, val);}
+	
+	/** Slot to respond to parameters change */
+	void on_SpinMASpecRad_valueChanged(int val) {Application::setParameter(ParMovAvgSpecRad, val);}
+	
+	/** Slot to respond to parameters change */
+	void on_SpinEstBackMARad_valueChanged(int val) {Application::setParameter(ParEstBackAveRadius, val);}
+	
+	/** Slot to respond to parameters change */
+	void on_SpinEstBackMinRad_valueChanged(int val) {Application::setParameter(ParEstBackMinRadius, val);}
+	
+	/** Slot to respond to parameters change */
+	void on_SpinStartFreq_valueChanged(double val) {Application::setParameter(ParIntervalStartFreq, val);}
+	
+	/** Slot to respond to parameters change */
+	void on_SpinFreqIntWidth_valueChanged(double val) {Application::setParameter(ParIntervalWidthFreq, val);}
+	
+	/** Send to charts the command to display the next record */
+	void on_ButtonNextRecord_clicked();
+	
+	/** Send to charts the command to display the previous record */
+	void on_ButtonPreviousRecord_clicked();
+	
+signals:
+	/** Signal emitted when a file path has been selected */
+	void readyToDisplay(QSharedPointer<QDir> dir);
 };
 
 #endif // audioRecMainWin_h

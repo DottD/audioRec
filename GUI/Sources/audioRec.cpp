@@ -1,13 +1,12 @@
 #include <QApplication>
+#include <Headers/Application.hpp>
 #include <Headers/audioRecMainWin.hpp>
-
-using namespace std;
 
 int main(int argc, char* argv[]){
 	/* Inizializzo e lancio l'interfaccia dei parametri in Qt */
-	QApplication Application(argc, argv);
+	Ui::Application app(argc, argv);
 	Ui::AudioRecMainWin MainWin;
 	MainWin.show();
 	
-	return Application.exec();
+	return app.exec();
 }

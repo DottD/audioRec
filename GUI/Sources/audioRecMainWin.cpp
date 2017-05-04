@@ -5,6 +5,7 @@ QWidget(parent),
 ui(new Ui::mainWin),
 processed(0),
 fileCount(0) {
+	qRegisterMetaType<QSharedPointer<QDir>>();
 	// Initial setup - mandatory
 	ui->setupUi(this);
 	// Set the line edit as drag and drop receiver
@@ -13,6 +14,29 @@ fileCount(0) {
 	// Set icons for record scolling buttons
 	ui->ButtonPreviousRecord->setIcon(QIcon(":/48x48/Prev.png"));
 	ui->ButtonNextRecord->setIcon(QIcon(":/48x48/Successive.png"));
+	// Move the record visualization widgets onto other threads
+	connect(this, SIGNAL(readyToDisplay(QSharedPointer<QDir>)),
+			ui->ChartShowRec, SLOT(display(QSharedPointer<QDir>)));
+	connect(this, SIGNAL(readyToDisplay(QSharedPointer<QDir>)),
+			ui->ChartShowRecSpectrum, SLOT(display(QSharedPointer<QDir>)));
+	connect(ui->ChartShowRec, SIGNAL(raiseError(QString)),
+			this, SLOT(popupError(QString)));
+	connect(ui->ChartShowRecSpectrum, SIGNAL(raiseError(QString)),
+			this, SLOT(popupError(QString)));
+	// Set parameters controls to the initial values
+	ui->SpinRecLength->setValue(Application::getParameter(ParRecLength).toInt());
+	ui->SpinMARad->setValue(Application::getParameter(ParMovAvgRadius).toInt());
+	ui->SpinLowFreq->setValue(Application::getParameter(ParLowpassFreq).toDouble());
+	ui->SpinMinFreq->setValue(Application::getParameter(ParMinFilterFreq).toDouble());
+	ui->SpinMaxFreq->setValue(Application::getParameter(ParMaxFilterFreq).toDouble());
+	ui->SpinMASpecRad->setValue(Application::getParameter(ParMovAvgSpecRad).toInt());
+	ui->SpinEstBackMARad->setValue(Application::getParameter(ParEstBackAveRadius).toInt());
+	ui->SpinEstBackMinRad->setValue(Application::getParameter(ParEstBackMinRadius).toInt());
+	ui->SpinStartFreq->setValue(Application::getParameter(ParIntervalStartFreq).toDouble());
+	ui->SpinFreqIntWidth->setValue(Application::getParameter(ParIntervalWidthFreq).toDouble());
+	// Set chart names
+	ui->ChartShowRec->chart()->setTitle("Time domain");
+	ui->ChartShowRecSpectrum->chart()->setTitle("Frequency Domain");
 }
 
 Ui::AudioRecMainWin::~AudioRecMainWin(){
@@ -105,6 +129,28 @@ void Ui::AudioRecMainWin::on_ButtonCompute_clicked(){
 	}
 }
 
+void Ui::AudioRecMainWin::on_LineEditInput_textChanged(QString text){
+	// Scan for audio files in the given path
+	QSharedPointer<QDir> dir(new QDir(text));
+	QSharedPointer<QStringList> audioFiles = listFilesInDir(dir, false /*return only file names*/);
+	// List options in the combo box
+	while(ui->ComboChooseFile->count() > 0) ui->ComboChooseFile->removeItem(0);
+	ui->ComboChooseFile->addItems(*audioFiles);
+}
+
+void Ui::AudioRecMainWin::on_ComboChooseFile_activated(QString text){
+	// Retrieve all possible audio files paths
+	QSharedPointer<QDir> dir(new QDir(text));
+	QSharedPointer<QDir> inputDir(new QDir(ui->LineEditInput->text()));
+	QSharedPointer<QStringList> audioFiles = listFilesInDir(inputDir, true /*return file paths*/);
+	// Search the current selected file among them
+	QSharedPointer<QStringList> selectedFile(new QStringList(audioFiles->filter(text)));
+	if (selectedFile->size() != 1) {popupError("Only one file should be returned"); return;}
+	// Create a dir from that file and pass it to the widgets
+	QSharedPointer<QDir> selectedDir(new QDir(selectedFile->first()));
+	emit readyToDisplay(selectedDir);
+}
+
 void Ui::AudioRecMainWin::on_OneProcessEnded(QSharedPointer<QDir> dir){
 	// Increase the processed counter
 	processed++;
@@ -114,11 +160,21 @@ void Ui::AudioRecMainWin::on_OneProcessEnded(QSharedPointer<QDir> dir){
 	ui->LabelCompletion->setText(completion);
 }
 
-void Ui::AudioRecMainWin::popupError(const QString& errorDescription) {
+void Ui::AudioRecMainWin::popupError(QString errorDescription) {
 	QMessageBox errorDispatcher;
 	errorDispatcher.setWindowTitle("Error");
 	errorDispatcher.setStandardButtons(QMessageBox::StandardButton::Ok);
 	errorDispatcher.setDefaultButton(QMessageBox::StandardButton::Ok);
 	errorDispatcher.setText(errorDescription);
 	errorDispatcher.exec();
+}
+
+void Ui::AudioRecMainWin::on_ButtonNextRecord_clicked(){
+	ui->ChartShowRec->stepUp();
+	ui->ChartShowRecSpectrum->stepUp();
+}
+
+void Ui::AudioRecMainWin::on_ButtonPreviousRecord_clicked(){
+	ui->ChartShowRec->stepDown();
+	ui->ChartShowRecSpectrum->stepDown();
 }

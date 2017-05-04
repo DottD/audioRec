@@ -7,11 +7,10 @@
 #include <QMimeData>
 
 namespace Ui {
-	/** QLineEdit subclass that handles file drag and drop.
-	 */
 	class LineEditDropReceiver;
 }
 
+/** QLineEdit subclass that handles file drag and drop. */
 class Ui::LineEditDropReceiver : public QLineEdit {
 	Q_OBJECT
 	

@@ -1,0 +1,10 @@
+<!DOCTYPE RCC><RCC version="1.0">
+    <qresource prefix="/">
+        <file>48x48/Prev.png</file>
+        <file>48x48/Successive.png</file>
+        <file>48x48/Newwin.png</file>
+        <file>48x48/Browse.png</file>
+        <file>48x48/Save.png</file>
+        <file>48x48/Save2.png</file>
+    </qresource>
+</RCC>

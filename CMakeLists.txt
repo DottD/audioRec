@@ -8,7 +8,7 @@ file(GLOB_RECURSE SOURCES Sources/*.cpp)
 file(GLOB_RECURSE RESOURCES Resources/*.qrc)
 
 #---Find the necessary packages
-find_package(Qt5 COMPONENTS Core Gui Widgets Multimedia REQUIRED)
+find_package(Qt5 COMPONENTS Core Gui Widgets Charts REQUIRED)
 find_package(Armadillo REQUIRED)
 find_package(SFML COMPONENTS audio)
 

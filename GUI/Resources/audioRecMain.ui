@@ -156,7 +156,10 @@
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
-        <widget class="QOpenGLWidget" name="GLshowRec">
+        <widget class="QComboBox" name="ComboChooseFile"/>
+       </item>
+       <item>
+        <widget class="Ui::ChartRecWidget" name="ChartShowRec" native="true">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -253,7 +256,7 @@
         </layout>
        </item>
        <item>
-        <widget class="QOpenGLWidget" name="GLshowRecFFT">
+        <widget class="Ui::ChartRecSpecWidget" name="ChartShowRecSpectrum" native="true">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -264,10 +267,212 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="TabNothing">
+     <widget class="QWidget" name="TabParameters">
       <attribute name="title">
        <string>Parameters</string>
       </attribute>
+      <layout class="QFormLayout" name="formLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="LabelRecLength">
+         <property name="text">
+          <string>Record Length</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QSpinBox" name="SpinRecLength">
+         <property name="minimum">
+          <number>10</number>
+         </property>
+         <property name="maximum">
+          <number>1000000</number>
+         </property>
+         <property name="value">
+          <number>16384</number>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="LabelMARad">
+         <property name="text">
+          <string>Mov. Ave. Radius</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QSpinBox" name="SpinMARad">
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>1000</number>
+         </property>
+         <property name="value">
+          <number>15</number>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="LabelLowFreq">
+         <property name="text">
+          <string>Lowpass frequency</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QDoubleSpinBox" name="SpinLowFreq">
+         <property name="minimum">
+          <double>0.000000000000000</double>
+         </property>
+         <property name="maximum">
+          <double>100000.000000000000000</double>
+         </property>
+         <property name="value">
+          <double>0.000000000000000</double>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="LabelMinFreq">
+         <property name="text">
+          <string>Min. frequency</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QDoubleSpinBox" name="SpinMinFreq">
+         <property name="minimum">
+          <double>10.000000000000000</double>
+         </property>
+         <property name="maximum">
+          <double>100000.000000000000000</double>
+         </property>
+         <property name="value">
+          <double>400.000000000000000</double>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="LabelMaxFreq">
+         <property name="text">
+          <string>Max. frequency</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QDoubleSpinBox" name="SpinMaxFreq">
+         <property name="minimum">
+          <double>10.000000000000000</double>
+         </property>
+         <property name="maximum">
+          <double>100000.000000000000000</double>
+         </property>
+         <property name="value">
+          <double>3500.000000000000000</double>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="LabelMASpecRad">
+         <property name="text">
+          <string>Mov. Ave. Spectrum Radius</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QSpinBox" name="SpinMASpecRad">
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>1000</number>
+         </property>
+         <property name="value">
+          <number>7</number>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0">
+        <widget class="QLabel" name="LabelEstBackMARad">
+         <property name="text">
+          <string>Est. Back. MA Radius</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="1">
+        <widget class="QSpinBox" name="SpinEstBackMARad">
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>1000</number>
+         </property>
+         <property name="value">
+          <number>15</number>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="0">
+        <widget class="QLabel" name="LabelEstBackMinRad">
+         <property name="text">
+          <string>Est. Back. Min. Radius</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="0">
+        <widget class="QLabel" name="LabelStartFreq">
+         <property name="text">
+          <string>Starting Frequency</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="1">
+        <widget class="QDoubleSpinBox" name="SpinStartFreq">
+         <property name="minimum">
+          <double>10.000000000000000</double>
+         </property>
+         <property name="maximum">
+          <double>100000.000000000000000</double>
+         </property>
+         <property name="value">
+          <double>500.000000000000000</double>
+         </property>
+        </widget>
+       </item>
+       <item row="9" column="0">
+        <widget class="QLabel" name="LabelFreqIntWidth">
+         <property name="text">
+          <string>Freq. Interval Width</string>
+         </property>
+        </widget>
+       </item>
+       <item row="9" column="1">
+        <widget class="QDoubleSpinBox" name="SpinFreqIntWidth">
+         <property name="minimum">
+          <double>20.000000000000000</double>
+         </property>
+         <property name="maximum">
+          <double>100000.000000000000000</double>
+         </property>
+         <property name="value">
+          <double>1000.000000000000000</double>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="1">
+        <widget class="QSpinBox" name="SpinEstBackMinRad">
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>1000</number>
+         </property>
+         <property name="value">
+          <number>7</number>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </widget>
     </widget>
    </item>
@@ -278,7 +483,19 @@
   <customwidget>
    <class>Ui::LineEditDropReceiver</class>
    <extends>QLineEdit</extends>
-   <header>../../Source/GUI/Headers/LineEditDropReceiver.hpp</header>
+   <header location="global">Headers/LineEditDropReceiver.hpp</header>
+  </customwidget>
+  <customwidget>
+   <class>Ui::ChartRecWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">Headers/ChartRecWidget.hpp</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>Ui::ChartRecSpecWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">Headers/ChartRecSpecWidget.hpp</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>
