@@ -9,15 +9,17 @@
 namespace Ui {
 	const quint8 ParNull = 0;
 	const quint8 ParRecLength = 1;
-	const quint8 ParMovAvgRadius = 2;
-	const quint8 ParLowpassFreq = 3;
-	const quint8 ParMinFilterFreq = 4;
-	const quint8 ParMaxFilterFreq = 5;
-	const quint8 ParMovAvgSpecRad = 6;
-	const quint8 ParEstBackAveRadius = 7;
-	const quint8 ParEstBackMinRadius = 8;
+	const quint8 ParGaussFilterRad = 2;
+	const quint8 ParBackEstMinFilterRad = 3;
+	const quint8 ParBackEstMaxPeakWidthAllowed = 4;
+	const quint8 ParBackEstDerEstimationDiam = 5;
+	const quint8 ParBackEstMaxIterations = 6;
+	const quint8 ParBackEstMaxAllowedInconsistency = 7;
+	const quint8 ParBackEstMaxDistNodes = 8;
 	const quint8 ParIntervalStartFreq = 9;
 	const quint8 ParIntervalWidthFreq = 10;
+	const quint8 ParForeGaussFilterRad = 11;
+	const quint8 ParBinWidth = 12;
 	
 	class Application;
 }
@@ -45,34 +47,40 @@ public:
 					return QVariant();
 					break;
 				case ParRecLength:
-					return QVariant(int(16384));
+					return QVariant(int(18432));
 					break;
-				case ParMovAvgRadius:
-					return QVariant(int(15));
+				case ParGaussFilterRad:
+					return QVariant(int(16-1));
 					break;
-				case ParLowpassFreq:
-					return QVariant(double(0));
+				case ParBackEstMinFilterRad:
+					return QVariant(int(32-1));
 					break;
-				case ParMinFilterFreq:
-					return QVariant(double(400));
+				case ParBackEstMaxPeakWidthAllowed:
+					return QVariant(double(0.05));
 					break;
-				case ParMaxFilterFreq:
-					return QVariant(double(3500));
+				case ParBackEstDerEstimationDiam:
+					return QVariant(int(4));
 					break;
-				case ParMovAvgSpecRad:
-					return QVariant(int(140));
+				case ParBackEstMaxIterations:
+					return QVariant(int(10));
+					break;
+				case ParBackEstMaxAllowedInconsistency:
+					return QVariant(double(2));
+					break;
+				case ParBackEstMaxDistNodes:
+					return QVariant(int(3));
 					break;
 				case ParIntervalStartFreq:
-					return QVariant(double(500));
+					return QVariant(double(256));
 					break;
 				case ParIntervalWidthFreq:
-					return QVariant(double(1000));
+					return QVariant(double(1024));
 					break;
-				case ParEstBackAveRadius:
-					return QVariant(int(50));
+				case ParForeGaussFilterRad:
+					return QVariant(int(32-1));
 					break;
-				case ParEstBackMinRadius:
-					return QVariant(int(100));
+				case ParBinWidth:
+					return QVariant(int(8));
 					break;
 				default:
 					return QVariant();

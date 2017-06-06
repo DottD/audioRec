@@ -41,6 +41,16 @@ vec movingAverage(const vec& array,
 	return filtered.rows(m, m+array.size()-1);
 }
 
+arma::vec gaussianFilter(const arma::vec& array,
+						 const unsigned int& m,
+						 const border_type& bd){
+	vec padded = arrayPad(array, m, bd);
+	vec kernel = exp( - square(linspace(0, 2*m, 2*m+1) - m) / double(m*m) * 2.0 );
+	kernel = arma::normalise(kernel, 1/*1-norm*/);
+	vec filtered = conv(padded, kernel, "same");
+	return filtered.rows(m, m+array.size()-1);
+}
+
 
 /* Applies a gaussian band pass filter to the array. The filter is designed
  to cut the frequencies below freq1 and above freq2.
@@ -84,12 +94,12 @@ vec bandPassFilter(const vec& array,
 double freq2bin(const double& sampleRate,
 				const double& totalSamples,
 				const double& frequency){
-	return frequency*totalSamples/sampleRate;
+	return frequency*(sampleRate/totalSamples);
 }
 double bin2freq(const double& sampleRate,
 				const double& totalSamples,
 				const double& bin){
-	return bin*sampleRate/totalSamples;
+	return bin*(totalSamples/sampleRate);
 }
 
 /* The function computes and returns the coordinate of a donor pixel corresponding
@@ -183,4 +193,114 @@ arma::vec minFilter(const arma::vec& array,
 	}
 	
 	return out;
+}
+
+arma::vec backgroundEstimation(const arma::vec& array,
+							   const unsigned int& minFilterRad,
+							   const double& maxPeakWidthAllowed,
+							   const unsigned int& derEstimationDiam,
+							   const unsigned int& maxIterations,
+							   const double& maxAllowedInconsistency,
+							   const unsigned int& maxDistNodes){
+	arma::vec arrayMin, indices, nodesX, nodesY, background, relDiff;
+	alglib::real_1d_array x, y;
+	alglib::spline1dinterpolant interp;
+	unsigned int n_elem = array.size();
+	unsigned int n_nodes = round(maxPeakWidthAllowed * n_elem);
+	double adjacentNodesDist;
+	double inconsistency = __DBL_MAX__;
+	// Compute the minimum filter of the input array
+	arrayMin = minFilter(array, minFilterRad);
+	
+	// Get the array of nodes (subsampling arrayMin at equally spaced points)
+	indices = arma::linspace(0, n_elem-1, n_elem); // abscissas are elements positions
+	x.setcontent(n_elem, indices.memptr());
+	y.setcontent(n_elem, arrayMin.memptr()); // ordinates are the arrayMin values
+	alglib::spline1dbuildlinear(x, y, interp); // create a 1d spline interpolant
+	nodesX = arma::linspace(0, n_elem-1, n_nodes); // abscissas are eq.spaced nodes
+	adjacentNodesDist = nodesX[1]-nodesX[0];
+	nodesY.zeros(n_nodes); // nodesVal contains interpolated arrayMin values over indices
+	for (unsigned int i = 0; i < n_nodes; i++)
+		nodesY[i] = alglib::spline1dcalc(interp, nodesX[i]);
+	
+	// Estimate the first derivative of the array near the endpoints
+	int boundType = 0; // this is the default value (used when derEstimationRad < 2)
+	double leftDer = 0, rightDer = 0; //
+	if (derEstimationDiam > 1) {
+		boundType = 1;
+		leftDer = arma::mean(arma::diff(arrayMin.subvec(0,derEstimationDiam-1)));
+		rightDer = arma::mean(arma::diff(arrayMin.subvec(arrayMin.size()-derEstimationDiam,arrayMin.size()-1)));
+	}
+	
+	// Iterate a given number of times...
+	unsigned int iter = 1;
+	while(1){
+		// Set x and y content to the data in nodesX and nodesY
+		x.setcontent(n_nodes, nodesX.memptr());
+		y.setcontent(n_nodes, nodesY.memptr());
+		// Create the cubic spline interpolant of the nodes
+		alglib::spline1dbuildcubic(x, y,
+								   x.length(),
+								   boundType, leftDer,
+								   boundType, rightDer,
+								   interp);
+		// Get the background from this interpolant
+		background.zeros(n_elem);
+		for (unsigned int k = 0; k < n_elem; k++)
+			background[k] = alglib::spline1dcalc(interp, indices[k]);
+		// Check inconsistency or iteration number
+		if (inconsistency < maxAllowedInconsistency || iter++ > maxIterations) break;
+		// Evaluate the difference between foreground and background, relative to the background
+		relDiff = arma::abs(1 - array/background);
+		// Get the positions where background is over foreground
+		arma::uvec pos = arma::find(background > array);
+		if (pos.empty()) break;
+		// Cluster those positions by relative distance less than maxDistNodes
+		arma::uvec posdiff = arma::diff(pos); // compute the differences between adjacent positions
+		posdiff.insert_rows(0, 1);  // prepend a zero to the difference array to keep the same dimension
+		double maxDist = maxDistNodes * adjacentNodesDist;
+		uword m = pos[0], M = pos[0], n = 1;
+		double v = relDiff[0];
+		std::list<std::tuple<uword, uword, double>> ranges;
+		for (unsigned int k = 0; k < pos.size(); k++){ // cycle over pos array
+			if (posdiff[k] < 2*maxDist && k < pos.size()-1) { // position is part of the previous cluster (update range)
+				M = pos[k];
+				n++;
+				v += relDiff[M];
+			} else { // position is in a new cluster (finalize range and reset)
+				// To ensure that the range covers at least one node, we add maxDist to both ends
+				ranges.emplace_back(m-maxDist, M+maxDist, v/n);
+				m = pos[k];
+				M = pos[k];
+				n = 1;
+				v = relDiff[M];
+			}
+		}
+		// Update each node in one of the ranges
+		for(unsigned int k = 0; k < n_nodes; k++){
+			if (ranges.empty()) break;
+			const std::tuple<uword, uword, double>& range = ranges.front();
+			if (nodesX[k] < std::get<0>(range)) continue; // node before first range - do nothing
+			else if (nodesX[k] > std::get<1>(range)) { // node after first range
+				ranges.pop_front(); // remove the unuseful range (nodes are ordered)
+				k--; // take again this node with next range
+				continue;
+			} else { // node is in range
+				double c = (std::get<0>(range) + std::get<1>(range)) / 2.0; // range center
+				double s = c-std::get<0>(range); // range radius
+				// Compute a gaussian weight according to the node position in the range
+				double weight = exp( - pow(nodesX[k]-c, 2) / (2.0 * pow(s, 2) / 3.0) );
+//				std::cout << "range=(" << std::get<0>(range) << ", " << std::get<1>(range) << ", " << std::get<2>(range) << ") ";
+//				std::cout << "c=" << c << " s=" << s << " w=" << weight << " ";
+//				std::cout << "node=(" << nodesX[k] << ", " << nodesY[k] << ") ";
+				nodesY[k] *= (1 - std::get<2>(range) * weight);
+//				std::cout << "--> node=(" << nodesX[k] << ", " << nodesY[k] << ") " << std::endl;
+			}
+		}
+		// Compute inconsistency
+		inconsistency = double(pos.size()) / double(n_elem) * 100;
+	}
+	
+	// Return the background
+	return background;
 }

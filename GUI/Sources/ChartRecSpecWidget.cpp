@@ -10,7 +10,7 @@ void Ui::ChartRecSpecWidget::start(AudioProcess* process){
 }
 
 double Ui::ChartRecSpecWidget::indexConversion(int k) {
-	return double(k)*double(Application::getParameter(ParRecLength).toInt())/double(getSampleRate());
+	return bin2freq(double(getSampleRate()), double(Application::getParameter(ParRecLength).toInt()), double(k));
 }
 
 void Ui::ChartRecSpecWidget::updateAxes(){
@@ -35,14 +35,18 @@ void Ui::ChartRecSpecWidget::updateAxes(){
 	chart()->axisX()->setRange(minX, maxX);
 	chart()->axisX()->setTitleText("Frequency (Hz)");
 	
-	QLogValueAxis* logAxisY = new QLogValueAxis;
-	logAxisY->setBase(10);
-	chart()->removeAxis(chart()->axisY());
-	chart()->addAxis(logAxisY, Qt::AlignLeft);
-	for (QAbstractSeries* series: listOfSeries) {
-		QLineSeries* line = dynamic_cast<QLineSeries*>(series);
-		if (line == NULL) continue;
-		line->attachAxis(logAxisY);
+	if (logscale){
+		QLogValueAxis* logAxisY = new QLogValueAxis;
+		logAxisY->setBase(10);
+		chart()->removeAxis(chart()->axisY());
+		chart()->addAxis(logAxisY, Qt::AlignLeft);
+		for (QAbstractSeries* series: listOfSeries) {
+			QLineSeries* line = dynamic_cast<QLineSeries*>(series);
+			if (line == NULL) continue;
+			line->attachAxis(logAxisY);
+		}
+		logAxisY->setRange(minY, maxY);
+	} else {
+		chart()->axisY()->setRange(minY, maxY);
 	}
-	logAxisY->setRange(minY, maxY);
 }

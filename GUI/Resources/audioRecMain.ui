@@ -14,131 +14,6 @@
    <string>FindMinutiae</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0">
-    <layout class="QVBoxLayout" name="VertIO">
-     <item>
-      <layout class="QHBoxLayout" name="HorInput">
-       <property name="sizeConstraint">
-        <enum>QLayout::SetFixedSize</enum>
-       </property>
-       <item>
-        <widget class="QLabel" name="LabelInput">
-         <property name="text">
-          <string>Input Path or File</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="Ui::LineEditDropReceiver" name="LineEditInput"/>
-       </item>
-       <item>
-        <widget class="QPushButton" name="ButtonInputBrowse">
-         <property name="text">
-          <string>Browse...</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="HorOutput">
-       <property name="sizeConstraint">
-        <enum>QLayout::SetFixedSize</enum>
-       </property>
-       <item>
-        <widget class="QLabel" name="LabelOutput">
-         <property name="text">
-          <string>Output Path</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="Ui::LineEditDropReceiver" name="LineEditOutput"/>
-       </item>
-       <item>
-        <widget class="QPushButton" name="ButtonOutputBrowse">
-         <property name="text">
-          <string>Browse...</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="HorOutputFormat">
-       <property name="sizeConstraint">
-        <enum>QLayout::SetFixedSize</enum>
-       </property>
-       <item>
-        <widget class="QLabel" name="LabelOutputFormat">
-         <property name="text">
-          <string>Output File Format</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QComboBox" name="ComboOutputFormat">
-         <item>
-          <property name="text">
-           <string>Binary</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>JPEG</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>PNG</string>
-          </property>
-         </item>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="HorComputationControl">
-       <item>
-        <widget class="QPushButton" name="ButtonCompute">
-         <property name="maximumSize">
-          <size>
-           <width>100</width>
-           <height>16777215</height>
-          </size>
-         </property>
-         <property name="text">
-          <string>Compute</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="LabelCompletion">
-         <property name="text">
-          <string>Completion</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-         </property>
-         <property name="indent">
-          <number>10</number>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <widget class="QOpenGLWidget" name="GLMatrixShow">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
    <item row="0" column="1">
     <widget class="QTabWidget" name="TabOptions">
      <property name="tabPosition">
@@ -263,6 +138,20 @@
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
+         <zorder>ChartShowRec</zorder>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="CheckLogScale">
+         <property name="text">
+          <string>Log scale</string>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
+         </property>
+         <property name="tristate">
+          <bool>false</bool>
+         </property>
         </widget>
        </item>
       </layout>
@@ -272,35 +161,22 @@
        <string>Parameters</string>
       </attribute>
       <layout class="QFormLayout" name="formLayout">
-       <item row="0" column="0">
-        <widget class="QLabel" name="LabelRecLength">
+       <item row="1" column="0">
+        <widget class="QLabel" name="LabelParRecLength">
          <property name="text">
           <string>Record Length</string>
          </property>
         </widget>
        </item>
-       <item row="0" column="1">
-        <widget class="QSpinBox" name="SpinRecLength">
-         <property name="minimum">
-          <number>10</number>
-         </property>
-         <property name="maximum">
-          <number>1000000</number>
-         </property>
-         <property name="value">
-          <number>16384</number>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QLabel" name="LabelMARad">
+       <item row="2" column="0">
+        <widget class="QLabel" name="LabelParGaussFilterRad">
          <property name="text">
-          <string>Mov. Ave. Radius</string>
+          <string>Gaussian Filter Radius</string>
          </property>
         </widget>
        </item>
-       <item row="1" column="1">
-        <widget class="QSpinBox" name="SpinMARad">
+       <item row="2" column="1">
+        <widget class="QSpinBox" name="SpinParGaussFilterRad">
          <property name="minimum">
           <number>1</number>
          </property>
@@ -312,75 +188,52 @@
          </property>
         </widget>
        </item>
-       <item row="2" column="0">
-        <widget class="QLabel" name="LabelLowFreq">
-         <property name="text">
-          <string>Lowpass frequency</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="1">
-        <widget class="QDoubleSpinBox" name="SpinLowFreq">
-         <property name="minimum">
-          <double>0.000000000000000</double>
-         </property>
-         <property name="maximum">
-          <double>100000.000000000000000</double>
-         </property>
-         <property name="value">
-          <double>0.000000000000000</double>
-         </property>
-        </widget>
-       </item>
        <item row="3" column="0">
-        <widget class="QLabel" name="LabelMinFreq">
+        <widget class="QLabel" name="LabelParBackEstMinFilterRad">
          <property name="text">
-          <string>Min. frequency</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="1">
-        <widget class="QDoubleSpinBox" name="SpinMinFreq">
-         <property name="minimum">
-          <double>10.000000000000000</double>
-         </property>
-         <property name="maximum">
-          <double>100000.000000000000000</double>
-         </property>
-         <property name="value">
-          <double>400.000000000000000</double>
+          <string>Back. Est. Min. Filter Radius</string>
          </property>
         </widget>
        </item>
        <item row="4" column="0">
-        <widget class="QLabel" name="LabelMaxFreq">
+        <widget class="QLabel" name="LabelParBackEstMaxPeakWidthAllowed">
          <property name="text">
-          <string>Max. frequency</string>
+          <string>Est. Back. Max. Peak Width (relative)</string>
          </property>
         </widget>
        </item>
        <item row="4" column="1">
-        <widget class="QDoubleSpinBox" name="SpinMaxFreq">
+        <widget class="QDoubleSpinBox" name="SpinParBackEstMaxPeakWidthAllowed">
          <property name="minimum">
-          <double>10.000000000000000</double>
+          <double>0.000000000000000</double>
          </property>
          <property name="maximum">
-          <double>100000.000000000000000</double>
+          <double>1.000000000000000</double>
+         </property>
+         <property name="singleStep">
+          <double>0.010000000000000</double>
          </property>
          <property name="value">
-          <double>3500.000000000000000</double>
+          <double>1.000000000000000</double>
          </property>
         </widget>
        </item>
        <item row="5" column="0">
-        <widget class="QLabel" name="LabelMASpecRad">
+        <widget class="QLabel" name="LabelParBackEstDerEstimationDiam">
          <property name="text">
-          <string>Mov. Ave. Spectrum Radius</string>
+          <string>Est. Back. Boundary Deriv. Diam.</string>
          </property>
         </widget>
        </item>
-       <item row="5" column="1">
-        <widget class="QSpinBox" name="SpinMASpecRad">
+       <item row="6" column="0">
+        <widget class="QLabel" name="LabelParBackEstMaxIterations">
+         <property name="text">
+          <string>Est. Back. Max. Iterations</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="1">
+        <widget class="QSpinBox" name="SpinParBackEstMaxIterations">
          <property name="minimum">
           <number>1</number>
          </property>
@@ -392,15 +245,22 @@
          </property>
         </widget>
        </item>
-       <item row="6" column="0">
-        <widget class="QLabel" name="LabelEstBackMARad">
+       <item row="7" column="0">
+        <widget class="QLabel" name="LabelParBackEstMaxAllowedInconsistency">
          <property name="text">
-          <string>Est. Back. MA Radius</string>
+          <string>Est. Back. Max. Inconsistency</string>
          </property>
         </widget>
        </item>
-       <item row="6" column="1">
-        <widget class="QSpinBox" name="SpinEstBackMARad">
+       <item row="8" column="0">
+        <widget class="QLabel" name="LabelParBackEstMaxDistNodes">
+         <property name="text">
+          <string>Est. Back. Updating Radius</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="1">
+        <widget class="QSpinBox" name="SpinParBackEstMaxDistNodes">
          <property name="minimum">
           <number>1</number>
          </property>
@@ -408,28 +268,21 @@
           <number>1000</number>
          </property>
          <property name="value">
-          <number>15</number>
+          <number>7</number>
          </property>
         </widget>
        </item>
-       <item row="7" column="0">
-        <widget class="QLabel" name="LabelEstBackMinRad">
-         <property name="text">
-          <string>Est. Back. Min. Radius</string>
-         </property>
-        </widget>
-       </item>
-       <item row="8" column="0">
-        <widget class="QLabel" name="LabelStartFreq">
+       <item row="9" column="0">
+        <widget class="QLabel" name="LabelParIntervalStartFreq">
          <property name="text">
           <string>Starting Frequency</string>
          </property>
         </widget>
        </item>
-       <item row="8" column="1">
-        <widget class="QDoubleSpinBox" name="SpinStartFreq">
+       <item row="9" column="1">
+        <widget class="QDoubleSpinBox" name="SpinParIntervalStartFreq">
          <property name="minimum">
-          <double>10.000000000000000</double>
+          <double>0.000000000000000</double>
          </property>
          <property name="maximum">
           <double>100000.000000000000000</double>
@@ -439,17 +292,17 @@
          </property>
         </widget>
        </item>
-       <item row="9" column="0">
-        <widget class="QLabel" name="LabelFreqIntWidth">
+       <item row="10" column="0">
+        <widget class="QLabel" name="LabelParIntervalWidthFreq">
          <property name="text">
           <string>Freq. Interval Width</string>
          </property>
         </widget>
        </item>
-       <item row="9" column="1">
-        <widget class="QDoubleSpinBox" name="SpinFreqIntWidth">
+       <item row="10" column="1">
+        <widget class="QDoubleSpinBox" name="SpinParIntervalWidthFreq">
          <property name="minimum">
-          <double>20.000000000000000</double>
+          <double>1.000000000000000</double>
          </property>
          <property name="maximum">
           <double>100000.000000000000000</double>
@@ -459,16 +312,274 @@
          </property>
         </widget>
        </item>
-       <item row="7" column="1">
-        <widget class="QSpinBox" name="SpinEstBackMinRad">
-         <property name="minimum">
-          <number>1</number>
+       <item row="1" column="1">
+        <widget class="QComboBox" name="ComboParRecLength">
+         <item>
+          <property name="text">
+           <string>16384</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>18432</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>20480</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="11" column="0">
+        <widget class="QLabel" name="LabelParForeGaussFilterRad">
+         <property name="text">
+          <string>Foreground Gauss Filter Radius</string>
          </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QSpinBox" name="SpinParBackEstMinFilterRad">
          <property name="maximum">
           <number>1000</number>
          </property>
-         <property name="value">
-          <number>7</number>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QSpinBox" name="SpinParBackEstDerEstimationDiam">
+         <property name="maximum">
+          <number>1000</number>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="1">
+        <widget class="QDoubleSpinBox" name="SpinParBackEstMaxAllowedInconsistency">
+         <property name="maximum">
+          <double>100.000000000000000</double>
+         </property>
+        </widget>
+       </item>
+       <item row="11" column="1">
+        <widget class="QSpinBox" name="SpinParForeGaussFilterRad">
+         <property name="maximum">
+          <number>1000</number>
+         </property>
+        </widget>
+       </item>
+       <item row="12" column="0">
+        <widget class="QLabel" name="LabelParBinWidth">
+         <property name="text">
+          <string>Binning Matrix Bin Width</string>
+         </property>
+        </widget>
+       </item>
+       <item row="12" column="1">
+        <widget class="QSpinBox" name="SpinParBinWidth">
+         <property name="maximum">
+          <number>1000</number>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>1</number>
+     </property>
+     <widget class="QWidget" name="TabIO">
+      <attribute name="title">
+       <string>Input/Output</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <layout class="QHBoxLayout" name="HorInput">
+         <property name="sizeConstraint">
+          <enum>QLayout::SetFixedSize</enum>
+         </property>
+         <item>
+          <widget class="QLabel" name="LabelInput">
+           <property name="text">
+            <string>Input Path or File</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="Ui::LineEditDropReceiver" name="LineEditInput"/>
+         </item>
+         <item>
+          <widget class="QPushButton" name="ButtonInputBrowse">
+           <property name="text">
+            <string>Browse...</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="HorOutput">
+         <property name="sizeConstraint">
+          <enum>QLayout::SetFixedSize</enum>
+         </property>
+         <item>
+          <widget class="QLabel" name="LabelOutput">
+           <property name="text">
+            <string>Output Path</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="Ui::LineEditDropReceiver" name="LineEditOutput"/>
+         </item>
+         <item>
+          <widget class="QPushButton" name="ButtonOutputBrowse">
+           <property name="text">
+            <string>Browse...</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="HorComputationControl">
+         <item>
+          <widget class="QPushButton" name="ButtonCompute">
+           <property name="maximumSize">
+            <size>
+             <width>100</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Compute</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="LabelCompletion">
+           <property name="text">
+            <string>Completion</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+           <property name="indent">
+            <number>10</number>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="Ui::ImageSlide" name="LabelMatrixView">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::NoFrame</enum>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="scaledContents">
+          <bool>true</bool>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <item>
+          <widget class="QPushButton" name="ButtonPrevImage">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="LabelImageName">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Image Name</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="ButtonNextImage">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="TabDB">
+      <attribute name="title">
+       <string>DB Creation</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <layout class="QHBoxLayout" name="HorInputDB">
+         <property name="sizeConstraint">
+          <enum>QLayout::SetFixedSize</enum>
+         </property>
+         <item>
+          <widget class="QLabel" name="LabelInputDB">
+           <property name="text">
+            <string>Input Path</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="Ui::LineEditDropReceiver" name="LineEditInputDB"/>
+         </item>
+         <item>
+          <widget class="QPushButton" name="ButtonInputBrowseDB">
+           <property name="text">
+            <string>Browse...</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QPushButton" name="ButtonCreateDatabase">
+         <property name="text">
+          <string>Create Database</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QChartView" name="BarSetDB" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="ButtonCleanPlot">
+         <property name="text">
+          <string>Clean Plot</string>
          </property>
         </widget>
        </item>
@@ -495,6 +606,17 @@
    <class>Ui::ChartRecSpecWidget</class>
    <extends>QWidget</extends>
    <header location="global">Headers/ChartRecSpecWidget.hpp</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>Ui::ImageSlide</class>
+   <extends>QLabel</extends>
+   <header location="global">Headers/ImageSlide.hpp</header>
+  </customwidget>
+  <customwidget>
+   <class>QChartView</class>
+   <extends>QWidget</extends>
+   <header location="global">QtCharts</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

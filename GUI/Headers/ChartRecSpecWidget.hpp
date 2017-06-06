@@ -15,6 +15,9 @@ class Ui::ChartRecSpecWidget : public Ui::ChartRecWidget {
 	
 	Q_OBJECT
 	
+private:
+	bool logscale = true;
+	
 protected:
 	
 	/** Converts an array index to the real frequency.
@@ -32,6 +35,12 @@ protected:
 	
 public:
 	ChartRecSpecWidget(QWidget* parent = Q_NULLPTR) : ChartRecWidget(parent) {};
+	
+	/** Switch to a logarithmic scale. */
+	void setLogScale(){this->logscale = true;}
+	
+	/** Switch to a natural scale. */
+	void setNaturalScale(){this->logscale = false;}
 };
 
 #endif /* ChartRecSpecWidget_hpp */

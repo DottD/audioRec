@@ -20,7 +20,7 @@ add_executable(AudioRec MACOSX_BUNDLE ${SOURCES} ${UI_H} ${HEADERS} ${RESOURCES}
 elseif(UNIX AND NOT APPLE)
 add_executable(AudioRec ${SOURCES} ${UI_H} ${HEADERS} ${RESOURCES})
 endif()
-target_link_libraries(AudioRec ${ARMADILLO_LIBRARIES} ${SFML_LIBRARIES} Qt5::Core Qt5::Gui Qt5::Widgets Qt5::Charts matLib)
+target_link_libraries(AudioRec ${ARMADILLO_LIBRARIES} ${SFML_LIBRARIES} Qt5::Core Qt5::Gui Qt5::Widgets Qt5::Charts Qt5::Multimedia matLib)
 
 #---Include headers directories to the executable
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} 

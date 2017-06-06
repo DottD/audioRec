@@ -25,6 +25,16 @@ Q_DECLARE_METATYPE(QSharedPointer<QDir>)
 Q_DECLARE_METATYPE(QSharedPointer<QVector<double>>)
 #endif
 
+#ifndef QSHARED_QVECVEC_META_DEF
+#define QSHARED_QVECVEC_META_DEF
+Q_DECLARE_METATYPE(QSharedPointer<QVector<QVector<double>>>)
+#endif
+
+#ifndef QSHARED_QIMAGE_META_DEF
+#define QSHARED_QIMAGE_META_DEF
+Q_DECLARE_METATYPE(QSharedPointer<QImage>)
+#endif
+
 #ifndef QSHARED_AUDIOREADER_META_DEF
 #define QSHARED_AUDIOREADER_META_DEF
 Q_DECLARE_METATYPE(QSharedPointer<Ui::AudioReader>)
@@ -58,7 +68,9 @@ private:
 public:
 	AudioProcess(QObject* parent = Q_NULLPTR) : QObject(parent) {
 		qRegisterMetaType<QSharedPointer<QDir>>();
+		qRegisterMetaType<QSharedPointer<QImage>>();
 		qRegisterMetaType<QSharedPointer<QVector<double>>>();
+		qRegisterMetaType<QSharedPointer<QVector<QVector<double>>>>();
 		qRegisterMetaType<QSharedPointer<AudioReader>>();
 	}; /**< Constructor with parent argument (same as QObject one) */
 	
@@ -93,6 +105,10 @@ signals:
 	void raiseError(QString errorMsg); /**< Signal emitted when an error occurs */
 	
 	void audioLoaded(QSharedPointer<AudioReader>); /**< Signal emitted when the audio file is loaded */
+	
+	void imageGenerated(QSharedPointer<QDir>, QSharedPointer<QImage>); /**< Signal emitted when a new image has been generated */
+	
+	void newFeatures(QSharedPointer<QDir>, QSharedPointer<QVector<QVector<double>>>); /**< Signal emitted when a new features vector has been generated. */
 };
 
 #endif /* AudioProcess_hpp */

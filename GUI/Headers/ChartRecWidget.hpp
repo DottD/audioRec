@@ -100,12 +100,17 @@ public:
 	/** Increase the current record index and display the result. 
 	 @sa stepDown, display
 	 */
-	void stepUp();
+	quint64 stepUp();
 	
 	/** Decrease the current record index and display the result. 
 	 @sa stepUp, display
 	 */
-	void stepDown();
+	quint64 stepDown();
+	
+	/** Get the index of the current record.
+	 @sa stepUp, stepDown
+	 */
+	quint64 getRecordIndex(){return this->recIdx;};
 	
 	/** Set the AudioReader property.
 	 This function sets the AudioReader to a previously allocated instance.

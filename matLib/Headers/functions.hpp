@@ -3,6 +3,7 @@
 
 #include <exception>
 #include <armadillo>
+#include <alglib/interpolation.h>
 
 #define SQ2(x) ((x)*(x))
 
@@ -26,6 +27,10 @@ arma::vec movingAverage(const arma::vec& array,
 						const unsigned int& m,
 						const border_type& bd = border_type::reflect);
 
+arma::vec gaussianFilter(const arma::vec& array,
+						 const unsigned int& m,
+						 const border_type& bd = border_type::reflect);
+
 arma::vec bandPassFilter(const arma::vec& array,
 						 const double& freq0,
 						 const double& freq1,
@@ -38,11 +43,24 @@ double bin2freq(const double& sampleRate,
 				const double& totalSamples,
 				const double& bin);
 
-
 arma::umat binCounts(const arma::mat& array,
 					 const std::vector<arma::vec>& bins);
 
 arma::vec minFilter(const arma::vec& array,
-					const unsigned int& m);
+					const unsigned int& rad);
+
+/**
+ 
+ @param[in] maxIterations Maximum number of iterations to be performed.
+ @param[in] maxDistNodes Maximum allowed distance (expressed in number of nodes) between two consecutive nodes marked as to be updated.
+ */
+arma::vec backgroundEstimation(const arma::vec& array,
+							   const unsigned int& minFilterRad,
+							   const double& maxPeakWidthAllowed,
+							   const unsigned int& derEstimationDiam,
+							   const unsigned int& maxIterations,
+							   const double& maxAllowedInconsistency,
+							   const unsigned int& maxDistNodes);
+
 
 #endif /* functions_h */

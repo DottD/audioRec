@@ -6,7 +6,7 @@ void Ui::ChartRecWidget::display(QSharedPointer<QDir> dir){
 	// Read audio file in a separate thread
 	AudioProcess* process = new AudioProcess; // autodeleted by QThreadPool when finished
 	// Check if the dir is empty (samples should be passed to child process) and if samples exist
-	if (!dir->isEmpty()) {
+	if (dir->path() == ".") {
 		if (this->isEmpty()) {
 			emit raiseError("Directory not set");
 			return;
@@ -106,11 +106,13 @@ void Ui::ChartRecWidget::keyPressEvent(QKeyEvent *event){
 	}
 }
 
-void Ui::ChartRecWidget::stepUp() {
+quint64 Ui::ChartRecWidget::stepUp() {
 	this->recIdx++;
 	display();
+	return this->recIdx;
 }
-void Ui::ChartRecWidget::stepDown() {
+quint64 Ui::ChartRecWidget::stepDown() {
 	if (this->recIdx > 0) this->recIdx--;
 	display();
+	return this->recIdx;
 }
