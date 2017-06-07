@@ -105,41 +105,21 @@ private:
 	 */
 	void on_OneProcessEnded(QSharedPointer<QDir>);
 	
-	/** Slot to respond to parameters change */
-	void on_ComboParRecLength_activated(int idx) {Application::setParameter(ParRecLength, QLocale().toInt(ui->ComboParRecLength->currentText()));}
+	/** Save the parameter with record length specification. */
+	void on_ButtonGroupRecLength_buttonClicked(QAbstractButton*);
 	
-	/** Slot to respond to parameters change */
-	void on_SpinParGaussFilterRad_valueChanged(int val) {Application::setParameter(ParGaussFilterRad, val);}
+	/** Save the parameter with tail suppression specification.
+	 Changes accordingly the other paramters related to the tail suppression.
+	 */
+	void on_SliderParTailSuppression_valueChanged(int value);
 	
-	/** Slot to respond to parameters change */
-	void on_SpinParBackEstMinFilterRad_valueChanged(int val) {Application::setParameter(ParBackEstMinFilterRad, val);}
+	/** Save the parameter with bin width specification. */
+	void on_ButtonGroupBinWidth_buttonClicked(QAbstractButton*);
 	
-	/** Slot to respond to parameters change */
-	void on_SpinParBackEstMaxPeakWidthAllowed_valueChanged(double val) {Application::setParameter(ParBackEstMaxPeakWidthAllowed, val);}
-	
-	/** Slot to respond to parameters change */
-	void on_SpinParBackEstDerEstimationDiam_valueChanged(int val) {Application::setParameter(ParBackEstDerEstimationDiam, val);}
-	
-	/** Slot to respond to parameters change */
-	void on_SpinParBackEstMaxIterations_valueChanged(int val) {Application::setParameter(ParBackEstMaxIterations, val);}
-	
-	/** Slot to respond to parameters change */
-	void on_SpinParBackEstMaxAllowedInconsistency_valueChanged(double val) {Application::setParameter(ParBackEstMaxAllowedInconsistency, val);}
-	
-	/** Slot to respond to parameters change */
-	void on_SpinParBackEstMaxDistNodes_valueChanged(int val) {Application::setParameter(ParBackEstMaxDistNodes, val);}
-	
-	/** Slot to respond to parameters change */
-	void on_SpinParIntervalStartFreq_valueChanged(double val) {Application::setParameter(ParIntervalStartFreq, val);}
-	
-	/** Slot to respond to parameters change */
-	void on_SpinParIntervalWidthFreq_valueChanged(double val) {Application::setParameter(ParIntervalWidthFreq, val);}
-	
-	/** Slot to respond to parameters change */
-	void on_SpinParForeGaussFilterRad_valueChanged(int val) {Application::setParameter(ParForeGaussFilterRad, val);}
-	
-	/** Slot to respond to parameters change */
-	void on_SpinParBinWidth_valueChanged(int val) {Application::setParameter(ParBinWidth, val);}
+	/** Save the parameter with peaks relevance specification.
+	 Changes accordingly the other paramters related to the peaks relevance.
+	 */
+	void on_SliderParPeaksRelevance_valueChanged(int value);
 	
 	/** Send to charts the command to display the next record */
 	void on_ButtonNextRecord_clicked();

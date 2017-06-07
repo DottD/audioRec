@@ -32,7 +32,7 @@ void Ui::ChartRecWidget::start(AudioProcess* process){
 }
 
 double Ui::ChartRecWidget::indexConversion(int k) {
-	return double(Application::getParameter(ParRecLength).toInt()*recIdx + k)/double(getSampleRate());
+	return double(Parameters::getParameter(Parameter::ParRecLength).toInt()*recIdx + k)/double(getSampleRate());
 }
 
 void Ui::ChartRecWidget::addSeries(QSharedPointer<QVector<double>> newData){

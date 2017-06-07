@@ -10,7 +10,7 @@ void Ui::ChartRecSpecWidget::start(AudioProcess* process){
 }
 
 double Ui::ChartRecSpecWidget::indexConversion(int k) {
-	return bin2freq(double(getSampleRate()), double(Application::getParameter(ParRecLength).toInt()), double(k));
+	return bin2freq(double(getSampleRate()), double(Parameters::getParameter(Parameter::ParRecLength).toInt()), double(k));
 }
 
 void Ui::ChartRecSpecWidget::updateAxes(){

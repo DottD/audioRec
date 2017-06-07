@@ -15,17 +15,17 @@ QSharedPointer<QVector<double>> Ui::AudioProcess::armaToQ(const arma::vec& vec) 
 
 void Ui::AudioProcess::run() {
 	// Load parameters from Application class
-	int recLength = Application::getParameter(ParRecLength).toInt();
-	int gaussFilterRad = Application::getParameter(ParGaussFilterRad).toInt();
-	int backEstMinFilterRad = Application::getParameter(ParBackEstMinFilterRad).toInt();
-	double backEstMaxPeakWidthAllowed = Application::getParameter(ParBackEstMaxPeakWidthAllowed).toDouble();
-	int backEstDerEstimationDiam = Application::getParameter(ParBackEstDerEstimationDiam).toInt();
-	int backEstMaxIterations = Application::getParameter(ParBackEstMaxIterations).toInt();
-	double backEstMaxAllowedInconsistency = Application::getParameter(ParBackEstMaxAllowedInconsistency).toDouble();
-	int backEstMaxDistNodes = Application::getParameter(ParBackEstMaxDistNodes).toInt();
-	double intervalStartFreq = Application::getParameter(ParIntervalStartFreq).toDouble();
-	double intervalWidthFreq = Application::getParameter(ParIntervalWidthFreq).toDouble();
-	int foreGaussFilterRad = Application::getParameter(ParForeGaussFilterRad).toInt();
+	int recLength = Parameters::getParameter(Parameter::ParRecLength).toInt();
+	int gaussFilterRad = Parameters::getParameter(Parameter::ParGaussFilterRad).toInt();
+	int backEstMinFilterRad = Parameters::getParameter(Parameter::ParBackEstMinFilterRad).toInt();
+	double backEstMaxPeakWidthAllowed = Parameters::getParameter(Parameter::ParBackEstMaxPeakWidthAllowed).toDouble();
+	int backEstDerEstimationDiam = Parameters::getParameter(Parameter::ParBackEstDerEstimationDiam).toInt();
+	int backEstMaxIterations = Parameters::getParameter(Parameter::ParBackEstMaxIterations).toInt();
+	double backEstMaxAllowedInconsistency = Parameters::getParameter(Parameter::ParBackEstMaxAllowedInconsistency).toDouble();
+	int backEstMaxDistNodes = Parameters::getParameter(Parameter::ParBackEstMaxDistNodes).toInt();
+	double intervalStartFreq = Parameters::getParameter(Parameter::ParIntervalStartFreq).toDouble();
+	int foreGaussFilterRad = Parameters::getParameter(Parameter::ParForeGaussFilterRad).toInt();
+	double buttFiltTail = Parameters::getParameter(Parameter::ParTailSuppression).toDouble();
 	// If samples is already allocated use it, otherwise load from file
 	if (reader.isNull() || reader->getSamplesPtr()->isEmpty()) {
 		// Read the audio file associated with this class instance
@@ -64,12 +64,13 @@ void Ui::AudioProcess::run() {
 				continue;
 			}
 			// Windowing (butterworth window)
-			double buttFiltTail = 0.05;
-			double buttFiltOrder = 15.0;
-			double cutoff = (1.0-2.0*buttFiltTail)/2.0 * double(samples.size());
-			double center = double(samples.size()-1)/2.0;
-			for (double k = 0.0; k < samples.size(); k += 1.0)
-				samples[k] *= 1.0 / sqrt(1.0 + pow((k-center)/cutoff, 2.0*buttFiltOrder));
+			{
+				double buttFiltOrder = 15.0;
+				double cutoff = (1.0-2.0*buttFiltTail)/2.0 * double(samples.size());
+				double center = double(samples.size()-1)/2.0;
+				for (double k = 0.0; k < samples.size(); k += 1.0)
+					samples[k] *= 1.0 / sqrt(1.0 + pow((k-center)/cutoff, 2.0*buttFiltOrder));
+			}
 			emit notableSeries(armaToQ(samples));
 			// Compute the signal spectrum (the Fourier Mathematica command divide by sqrt(N))
 			arma::vec wholeSpectrum = arma::square(arma::abs(arma::fft(samples)))/double(samples.size());

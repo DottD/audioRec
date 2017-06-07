@@ -29,19 +29,38 @@ fileCount(0) {
 			this, SLOT(popupError(QString)));
 	connect(ui->LabelMatrixView, SIGNAL(changedImage(QString)),
 			this, SLOT(on_changedImage(QString)));
-	// Set parameters controls to the initial values
-	ui->ComboParRecLength->setCurrentText(QLocale().toString(Application::getParameter(ParRecLength).toInt()));
-	ui->SpinParGaussFilterRad->setValue(Application::getParameter(ParGaussFilterRad).toInt());
-	ui->SpinParBackEstMinFilterRad->setValue(Application::getParameter(ParBackEstMinFilterRad).toInt());
-	ui->SpinParBackEstMaxPeakWidthAllowed->setValue(Application::getParameter(ParBackEstMaxPeakWidthAllowed).toDouble());
-	ui->SpinParBackEstDerEstimationDiam->setValue(Application::getParameter(ParBackEstDerEstimationDiam).toInt());
-	ui->SpinParBackEstMaxIterations->setValue(Application::getParameter(ParBackEstMaxIterations).toInt());
-	ui->SpinParBackEstMaxAllowedInconsistency->setValue(Application::getParameter(ParBackEstMaxAllowedInconsistency).toDouble());
-	ui->SpinParBackEstMaxDistNodes->setValue(Application::getParameter(ParBackEstMaxDistNodes).toInt());
-	ui->SpinParIntervalStartFreq->setValue(Application::getParameter(ParIntervalStartFreq).toDouble());
-	ui->SpinParIntervalWidthFreq->setValue(Application::getParameter(ParIntervalWidthFreq).toDouble());
-	ui->SpinParForeGaussFilterRad->setValue(Application::getParameter(ParForeGaussFilterRad).toInt());
-	ui->SpinParBinWidth->setValue(Application::getParameter(ParBinWidth).toInt());
+	// Set initial record length
+	{
+		int recLength = Parameters::getParameter(Parameter::ParRecLength).toInt();
+		QListIterator<QAbstractButton*> button(ui->ButtonGroupRecLength->buttons());
+		while (button.hasNext()) {
+			if (QLocale().toString(recLength) == button.peekNext()->text())
+				button.next()->setChecked(true);
+			else button.next()->setChecked(false);
+		}
+	}
+	// Set initial tail suppression slider value
+	{
+		double tailsupp = Parameters::getParameter(Parameter::ParTailSuppression).toDouble();
+		QSlider* slider = ui->SliderParTailSuppression;
+		slider->setValue( slider->minimum() + int(tailsupp * double(slider->maximum()-slider->minimum())) );
+	}
+	// Set initial bin width
+	{
+		int binWidth = Parameters::getParameter(Parameter::ParBinWidth).toInt();
+		QListIterator<QAbstractButton*> button(ui->ButtonGroupBinWidth->buttons());
+		while (button.hasNext()) {
+			if (QLocale().toString(binWidth) == button.peekNext()->text())
+				button.next()->setChecked(true);
+			else button.next()->setChecked(false);
+		}
+	}
+	// Set initial tail suppression slider value
+	{
+		double peaksrel = Parameters::getParameter(Parameter::ParPeaksRelevance).toDouble();
+		QSlider* slider = ui->SliderParPeaksRelevance;
+		slider->setValue( slider->minimum() + int(peaksrel * double(slider->maximum()-slider->minimum())) );
+	}
 	// Set chart names
 	ui->ChartShowRec->chart()->setTitle("Time domain");
 	ui->ChartShowRecSpectrum->chart()->setTitle("Frequency Domain");
@@ -315,4 +334,28 @@ void Ui::AudioRecMainWin::on_newFeatures(QSharedPointer<QDir> dir,
 	QFile newFile(path);
 	// Save the feature vector to file
 	vf.writeToFile(newFile);
+}
+
+void Ui::AudioRecMainWin::on_ButtonGroupRecLength_buttonClicked(QAbstractButton* button){
+	// Convert the name of the clicked button to the record length value
+	Parameters::setParameter(Parameter::ParRecLength, QLocale().toInt(button->text()));
+}
+
+void Ui::AudioRecMainWin::on_SliderParTailSuppression_valueChanged(int value){
+	// Save the parameter change
+	double min = ui->SliderParTailSuppression->minimum();
+	double max = ui->SliderParTailSuppression->maximum();
+	Parameters::setParameter(Parameter::ParTailSuppression, (double(value)-min)/(max-min));
+}
+
+void Ui::AudioRecMainWin::on_ButtonGroupBinWidth_buttonClicked(QAbstractButton* button){
+	// Convert the name of the clicked button to the record length value
+	Parameters::setParameter(Parameter::ParBinWidth, QLocale().toInt(button->text()));
+}
+
+void Ui::AudioRecMainWin::on_SliderParPeaksRelevance_valueChanged(int value){
+	// Save the parameter change
+	double min = ui->SliderParPeaksRelevance->minimum();
+	double max = ui->SliderParPeaksRelevance->maximum();
+	Parameters::setParameter(Parameter::ParPeaksRelevance, (double(value)-min)/(max-min));
 }
