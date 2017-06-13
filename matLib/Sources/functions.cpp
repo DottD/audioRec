@@ -15,8 +15,8 @@ vec arrayPad(const vec& array,
 	// Correctly fill the output array
 	if (bd == border_type::constant){
 		// Pad with m zeros on both sides
-		output.rows(0, m-1) = 0;
-		output.rows(array.size()+m, output.size()-1) = 0;
+		output.rows(0, m-1) = zeros<vec>(m);
+		output.rows(array.size()+m, output.size()-1) = zeros<vec>(m);
 	} else {
 		for(unsigned int k = 0; k < m; k++){
 			output(k) = array(borderInterpolate(k-m, array.size(), bd));
@@ -41,7 +41,7 @@ vec movingAverage(const vec& array,
 	return filtered.rows(m, m+array.size()-1);
 }
 
-arma::vec gaussianFilter(const arma::vec& array,
+vec gaussianFilter(const vec& array,
 						 const unsigned int& m,
 						 const border_type& bd){
 	vec padded = arrayPad(array, m, bd);
@@ -49,6 +49,19 @@ arma::vec gaussianFilter(const arma::vec& array,
 	kernel = arma::normalise(kernel, 1/*1-norm*/);
 	vec filtered = conv(padded, kernel, "same");
 	return filtered.rows(m, m+array.size()-1);
+}
+
+vec movingStdDev(const vec& signal,
+				 const unsigned int& m,
+				 const border_type& bd){
+	// Compute the moving average
+	vec movAvgSignal = movingAverage(signal, m, bd);
+	// Compute the squared deviation
+	movAvgSignal = square(movAvgSignal-signal);
+	// Compute the squared deviation moving average (moving variance)
+	movAvgSignal = movingAverage(movAvgSignal, m, bd);
+	// Compute the moving standard deviation
+	return sqrt(movAvgSignal);
 }
 
 
@@ -303,4 +316,78 @@ arma::vec backgroundEstimation(const arma::vec& array,
 	
 	// Return the background
 	return background;
+}
+
+void peakDetect(const arma::vec& signal,
+				std::vector<uint64_t>& emissionPeaks,
+				std::vector<double>& emissionPeaksProminence,
+				std::vector<uint64_t>& absorptionPeaks,
+				std::vector<double>& absorptionPeaksProminence,
+				const double& minRelVariation,
+				const double& minRelVarInfluence,
+				const bool& emissionFirst){
+	// Compute moving average standard deviation
+	vec movStdDev = movingStdDev(signal, (unsigned int)(round(minRelVarInfluence*signal.size())));
+	// Compute minimum variation (3*stdDev contains is almost the total variation)
+	vec minVariation = (minRelVariation * 3) * movStdDev;
+	// Set the initial conditions up
+	uint64_t relMinIdx = 0;
+	uint64_t relMaxIdx = 0;
+	double relMin = signal[0];
+	double relMax = signal[0];
+	bool emission = emissionFirst;
+	// Scan the signal
+	for(uint64_t k = 0; k < signal.n_elem; ++k){
+		if (signal[k] > relMax){
+			// Case 1: increasing over local max, update max
+			relMax = signal[k];
+			relMaxIdx = k;
+		} else if (signal[k] < relMin){
+			// Case 2: decreasing under local min, update min
+			relMin = signal[k];
+			relMinIdx = k;
+		} else if (emission and signal[k] < relMax-minVariation[k]){
+			// Case 3: signal moves away from max, store emission peak and search for absorption peaks
+			emissionPeaks.push_back(relMaxIdx);
+			emission = not emission;
+			// Update min
+			relMin = signal[k];
+			relMinIdx = k;
+		} else if (not emission and signal[k] > relMin+minVariation[k]){
+			// Case 4: signal moves away from min, store absorption peak and search for emission peaks
+			absorptionPeaks.push_back(relMinIdx);
+			emission = not emission;
+			// Update max
+			relMax = signal[k];
+			relMaxIdx = k;
+		}
+	}
+	// Compute prominence as the geometric mean of difference between neighbors
+	if (emissionPeaks.size() < 2 || absorptionPeaks.size() < 2 || std::abs(double(emissionPeaks.size())-double(absorptionPeaks.size())) > 1) return;
+	uint64_t maxIdx = std::min(emissionPeaks.size(), absorptionPeaks.size());
+	if (emissionFirst) {
+		emissionPeaksProminence.push_back(signal[emissionPeaks.front()] - signal[absorptionPeaks.front()]);
+		for(uint64_t k = 1; k < maxIdx; k++){
+			double emiLeftDiff = signal[emissionPeaks[k]] - signal[absorptionPeaks[k-1]];
+			double emiRightDiff = signal[emissionPeaks[k]] - signal[absorptionPeaks[k]];
+			emissionPeaksProminence.push_back( sqrt(emiLeftDiff * emiRightDiff) );
+			double absLeftDiff = signal[emissionPeaks[k-1]] - signal[absorptionPeaks[k-1]];
+			double absRightDiff = signal[emissionPeaks[k]] - signal[absorptionPeaks[k-1]];
+			absorptionPeaksProminence.push_back( sqrt(absLeftDiff * absRightDiff) );
+		}
+		if (emissionPeaks.size() == absorptionPeaks.size())
+			absorptionPeaksProminence.push_back(signal[emissionPeaks.back()] - signal[absorptionPeaks.back()]);
+	} else {
+		absorptionPeaksProminence.push_back(signal[emissionPeaks.front()] - signal[absorptionPeaks.front()]);
+		for(uint64_t k = 1; k < maxIdx; k++){
+			double absLeftDiff = signal[emissionPeaks[k-1]] - signal[absorptionPeaks[k]];
+			double absRightDiff = signal[emissionPeaks[k]] - signal[absorptionPeaks[k]];
+			absorptionPeaksProminence.push_back( sqrt(absLeftDiff * absRightDiff) );
+			double emiLeftDiff = signal[emissionPeaks[k-1]] - signal[absorptionPeaks[k-1]];
+			double emiRightDiff = signal[emissionPeaks[k-1]] - signal[absorptionPeaks[k]];
+			emissionPeaksProminence.push_back( sqrt(emiLeftDiff * emiRightDiff) );
+		}
+		if (emissionPeaks.size() == absorptionPeaks.size())
+			emissionPeaksProminence.push_back(signal[emissionPeaks.back()] - signal[absorptionPeaks.back()]);
+	}
 }

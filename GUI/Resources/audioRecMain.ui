@@ -23,7 +23,7 @@
       <enum>QTabWidget::Triangular</enum>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="TabFileInspection">
       <attribute name="title">
@@ -496,6 +496,34 @@
         </widget>
        </item>
        <item>
+        <widget class="QGroupBox" name="GroupBoxPeakHeightThreshold">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="title">
+          <string>Peaks Height Threshold</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_2">
+          <item row="0" column="0">
+           <widget class="QSlider" name="SliderPeakHeightThreshold">
+            <property name="maximum">
+             <number>1000</number>
+            </property>
+            <property name="value">
+             <number>10</number>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <spacer name="verticalSpacer">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
@@ -705,11 +733,22 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="ButtonCleanPlot">
-         <property name="text">
-          <string>Clean Plot</string>
-         </property>
-        </widget>
+        <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <item>
+          <widget class="QPushButton" name="ButtonCleanPlot">
+           <property name="text">
+            <string>Clean Plot</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="ButtonResetView">
+           <property name="text">
+            <string>Reset View</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
       </layout>
      </widget>
@@ -751,7 +790,7 @@
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="ButtonGroupRecLength"/>
   <buttongroup name="ButtonGroupBinWidth"/>
+  <buttongroup name="ButtonGroupRecLength"/>
  </buttongroups>
 </ui>

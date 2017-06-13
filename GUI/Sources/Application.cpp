@@ -45,7 +45,7 @@ Ui::Parameter::Parameter(ParName key){
 			set(int(32-1));
 			break;
 		case ParBackEstMaxPeakWidthAllowed:
-			set(double(0.05));
+			set(double(0.1));
 			break;
 		case ParBackEstDerEstimationDiam:
 			set(int(4));
@@ -60,22 +60,28 @@ Ui::Parameter::Parameter(ParName key){
 			set(int(3));
 			break;
 		case ParIntervalStartFreq:
-			set(double(256));
+			set(double(200));
 			break;
 		case ParIntervalWidthFreq:
 			set(double(1024));
 			break;
-		case ParForeGaussFilterRad:
+		case ParForeGaussFilterRad: // not used
 			set(int(32-1));
 			break;
 		case ParBinWidth:
 			set(int(8));
 			break;
 		case ParTailSuppression:
-			set(double(0.05));
+			set(double(0.1));
 			break;
 		case ParPeaksRelevance:
-			set(double(0.5));
+			set(double(0.3));
+			break;
+		case ParPeakMinVariationInfluence:
+			set(double(0.01));
+			break;
+		case ParPeakHeightThreshold:
+			set(double(0.03));
 			break;
 	}
 }
@@ -131,6 +137,12 @@ bool Ui::Parameter::isIntParameter(ParName key) {
 			return false;
 			break;
 		case ParPeaksRelevance:
+			return false;
+			break;
+		case ParPeakMinVariationInfluence:
+			return false;
+			break;
+		case ParPeakHeightThreshold:
 			return false;
 			break;
 	}

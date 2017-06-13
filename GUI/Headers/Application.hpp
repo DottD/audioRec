@@ -11,15 +11,21 @@
 namespace Ui {
 	class Parameter;
 	
+	/** Computes a hash value for the given parameter. */
 	uint qHash(Ui::Parameter key);
+	
+	/** Computes a hash value for the given parameter (overload). */
 	uint qHash(Ui::Parameter key, uint seed);
 	
 	class Parameters;
 	
+	/** Print debug information about a parameter. */
 	QDebug operator<<(QDebug debug, const Ui::Parameter& c);
 }
 
-
+/** Class that stores a parameter.
+ This class provides methods to handle the key and the value of the parameter,
+ along with its default value.*/
 class Ui::Parameter {
 public:
 	enum ParName : uint {
@@ -37,30 +43,44 @@ public:
 		ParForeGaussFilterRad,
 		ParBinWidth,
 		ParTailSuppression,
-		ParPeaksRelevance
+		ParPeaksRelevance,
+		ParPeakMinVariationInfluence,
+		ParPeakHeightThreshold
 	};
 	
 private:
-	ParName key;
+	ParName key; /**< Current parameter key. */
 	
-	QVariant value;
+	QVariant value; /**< Current parameter value. */
 	
 public:
+	/** Empty constructor. */
 	Parameter();
+	
+	/** Creates a parameter with the given key and its default value. */
 	Parameter(ParName key);
+	
+	/** Creates a parameter with given key and value. */
 	Parameter(ParName key, QVariant value);
 	
+	/** Set the key of the parameter. */
 	void setKey(ParName key) {this->key = key;}
+	
+	/** Set the value of the parameter. */
 	void set(QVariant value) {this->value = value;}
 	
+	/** Returns the current value for the parameter. */
 	QVariant get() const {return this->value;}
 	
+	/** Returns the key of the parameter. */
 	uint getKey() const {return static_cast<uint>(this->key);}
 	
+	/** Compares two parameters, considering them equal if they share the same key. */
 	bool operator==(const Parameter& a) const {
 		return (a.getKey()==this->getKey());
 	}
 	
+	/** Returns whether the parameter is an integer or a double. */
 	static bool isIntParameter(ParName key);
 };
 

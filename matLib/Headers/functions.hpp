@@ -31,11 +31,16 @@ arma::vec gaussianFilter(const arma::vec& array,
 						 const unsigned int& m,
 						 const border_type& bd = border_type::reflect);
 
+arma::vec movingStdDev(const arma::vec& signal,
+					   const unsigned int& m,
+					   const border_type& bd = border_type::reflect);
+
 arma::vec bandPassFilter(const arma::vec& array,
 						 const double& freq0,
 						 const double& freq1,
 						 const double& freq2,
-				   const double& sampleRate);
+						 const double& sampleRate);
+
 double freq2bin(const double& sampleRate,
 				const double& totalSamples,
 				const double& frequency);
@@ -62,5 +67,13 @@ arma::vec backgroundEstimation(const arma::vec& array,
 							   const double& maxAllowedInconsistency,
 							   const unsigned int& maxDistNodes);
 
+void peakDetect(const arma::vec& signal,
+				std::vector<uint64_t>& emissionPeaks,
+				std::vector<double>& emissionPeaksProminence,
+				std::vector<uint64_t>& absorptionPeaks,
+				std::vector<double>& absorptionPeaksProminence,
+				const double& minRelVariation,
+				const double& minRelVarInfluence,
+				const bool& emissionFirst = true);
 
 #endif /* functions_h */

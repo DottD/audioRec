@@ -61,6 +61,12 @@ fileCount(0) {
 		QSlider* slider = ui->SliderParPeaksRelevance;
 		slider->setValue( slider->minimum() + int(peaksrel * double(slider->maximum()-slider->minimum())) );
 	}
+	// Set initial peak height threshold slider value
+	{
+		double peaksrel = Parameters::getParameter(Parameter::ParPeakHeightThreshold).toDouble();
+		QSlider* slider = ui->SliderParPeaksRelevance;
+		slider->setValue( slider->minimum() + int(peaksrel * double(slider->maximum()-slider->minimum())) );
+	}
 	// Set chart names
 	ui->ChartShowRec->chart()->setTitle("Time domain");
 	ui->ChartShowRecSpectrum->chart()->setTitle("Frequency Domain");
@@ -165,6 +171,7 @@ void Ui::AudioRecMainWin::on_ButtonCompute_clicked(){
 	// Reset counters
 	fileCount = 0;
 	processed = 0;
+	ui->LabelMatrixView->reset();
 	// Extract the list of files (possibly one) to process
 	QSharedPointer<QDir> inputPath(new QDir(ui->LineEditInput->text()));
 	QSharedPointer<QStringList> audioFiles = listFilesInDir(inputPath, true, supportedAudioFormats);
@@ -190,6 +197,10 @@ void Ui::AudioRecMainWin::on_ButtonCompute_clicked(){
 	}
 }
 
+void Ui::AudioRecMainWin::on_ButtonResetView_clicked(){
+	ui->BarSetDB->chart()->zoomReset();
+}
+
 void Ui::AudioRecMainWin::on_ButtonCreateDatabase_clicked(){
 	// Check if it input is empty
 	if (ui->LineEditInputDB->text().isEmpty()) return;
@@ -201,6 +212,7 @@ void Ui::AudioRecMainWin::on_ButtonCreateDatabase_clicked(){
 	VoiceFeatures out_feat, inn_feat;
 	arma::vec distances(fileNames->size() * (fileNames->size()-1));
 	unsigned int k = 0;
+	qDebug() << fileNames->size();
 	for (const QString& out_name: *fileNames){
 		// Read current features vector from file
 		out_file.setFileName(out_name);
@@ -220,18 +232,34 @@ void Ui::AudioRecMainWin::on_ButtonCreateDatabase_clicked(){
 	// Div by 2 due to the repetition of feature vectors pairs
 	double mindist = distances.min();
 	double maxdist = distances.max();
-	arma::vec barpos = arma::regspace(mindist, 0.05, maxdist);
+	double distStep = 0.05;
+	arma::vec barpos = arma::regspace(mindist, distStep, maxdist);
+//	arma::vec barpos = arma::linspace(mindist, maxdist, 25);
 	arma::uvec uhist = arma::hist(distances, barpos) / 2;
 	arma::vec hist = arma::normalise(arma::conv_to<arma::vec>::from(uhist), 1);
-	// Plot the histogram
-	QLineSeries* qhist = new QLineSeries;
-	for (unsigned int k = 0; k < hist.size(); k++) qhist->append(qreal(barpos(k)), qreal(hist(k)));
+	// Chart appearence
 	QChart* chart = ui->BarSetDB->chart();
-	chart->addSeries(qhist);
 	chart->setTitle("Distribution");
 	chart->setTheme(QChart::ChartThemeBlueCerulean);
 	chart->setAnimationOptions(QChart::AnimationOption::AllAnimations);
+	ui->BarSetDB->setRubberBand(QChartView::RubberBand::RectangleRubberBand);
 	chart->legend()->setVisible(false);
+	// Select a color for the histogram
+	std::random_device rd;  //Will be used to obtain a seed for the random number engine
+	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+	std::uniform_real_distribution<> dis(0.4, 0.9);
+	QColor newColor = QColor::fromRgbF(dis(gen), dis(gen), dis(gen), 0.7);
+	// Draw the rectangles composing the histogram
+	double recWFactor = 2.5;
+	for (unsigned int k = 0; k < hist.size(); k++){
+		QLineSeries* topLine = new QLineSeries;
+		*topLine << QPointF(barpos(k)-distStep/recWFactor, hist(k)) << QPointF(barpos(k)+distStep/recWFactor, hist(k));
+		QAreaSeries* rectangle = new QAreaSeries(topLine);
+		rectangle->setColor(newColor);
+		rectangle->setBorderColor(QColor(0, 0, 0, 0));
+		chart->addSeries(rectangle);
+	}
+	// Plot the histogram
 	chart->createDefaultAxes();
 }
 
@@ -358,4 +386,11 @@ void Ui::AudioRecMainWin::on_SliderParPeaksRelevance_valueChanged(int value){
 	double min = ui->SliderParPeaksRelevance->minimum();
 	double max = ui->SliderParPeaksRelevance->maximum();
 	Parameters::setParameter(Parameter::ParPeaksRelevance, (double(value)-min)/(max-min));
+}
+
+void Ui::AudioRecMainWin::on_SliderPeakHeightThreshold_valueChanged(int value){
+	// Save the parameter change
+	double min = ui->SliderPeakHeightThreshold->minimum();
+	double max = ui->SliderPeakHeightThreshold->maximum();
+	Parameters::setParameter(Parameter::ParPeakHeightThreshold, (double(value)-min)/(max-min));
 }

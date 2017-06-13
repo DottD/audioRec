@@ -78,6 +78,9 @@ private:
 	 */
 	void on_ButtonCompute_clicked();
 	
+	/** Callback that resets the view to its original zoom and scroll. */
+	void on_ButtonResetView_clicked();
+	
 	/** Create database button callback.
 	 Computes the distances between every pair of feature vectors.
 	 */
@@ -120,6 +123,8 @@ private:
 	 Changes accordingly the other paramters related to the peaks relevance.
 	 */
 	void on_SliderParPeaksRelevance_valueChanged(int value);
+	
+	void on_SliderPeakHeightThreshold_valueChanged(int value);
 	
 	/** Send to charts the command to display the next record */
 	void on_ButtonNextRecord_clicked();
