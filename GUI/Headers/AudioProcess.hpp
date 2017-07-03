@@ -62,6 +62,7 @@ private:
 	// Define some constant value
 	bool computeAll = true; /**< Set to true if the computation of every record is required. */
 	unsigned int computeOnlyIdx = 0; /**< When computeAll is false, contains the index of the record to be computed. */
+	QSharedPointer<QVector<QVector<double>>> features; /**< The features computed during the process. */
 	
 	QSharedPointer<QVector<double>> armaToQ(const arma::vec& vec) const; /**< Function to convert vectors from arma to Qt style */
 	
@@ -72,6 +73,9 @@ public:
 		qRegisterMetaType<QSharedPointer<QVector<double>>>();
 		qRegisterMetaType<QSharedPointer<QVector<QVector<double>>>>();
 		qRegisterMetaType<QSharedPointer<AudioReader>>();
+		
+		// In order to avoid errors, always initialize features
+		features = QSharedPointer<QVector<QVector<double>>>(new QVector<QVector<double>>);
 	}; /**< Constructor with parent argument (same as QObject one) */
 	
 	void setFileName(QSharedPointer<QDir>); /**< Setter for the fileName property */
@@ -88,6 +92,8 @@ public:
 	
 	void setComputeOnly(unsigned int idx) {this->computeOnlyIdx = idx; this->computeAll = false;} /**< Instruct to compute only the given record */
 	unsigned int getComputeOnly() {return this->computeOnlyIdx;} /**< Get which record the instance has been instructed to compute */
+	
+	QSharedPointer<QVector<QVector<double>>> getFeatures(){return this->features;}; /**< Returns the features computed */
 	
 	/** Reimplementation of the run method.
 	 This is the main function of the class: it performs all required operations on the file

@@ -303,11 +303,11 @@ arma::vec backgroundEstimation(const arma::vec& array,
 				double s = c-std::get<0>(range); // range radius
 				// Compute a gaussian weight according to the node position in the range
 				double weight = exp( - pow(nodesX[k]-c, 2) / (2.0 * pow(s, 2) / 3.0) );
-//				std::cout << "range=(" << std::get<0>(range) << ", " << std::get<1>(range) << ", " << std::get<2>(range) << ") ";
-//				std::cout << "c=" << c << " s=" << s << " w=" << weight << " ";
-//				std::cout << "node=(" << nodesX[k] << ", " << nodesY[k] << ") ";
+				//				std::cout << "range=(" << std::get<0>(range) << ", " << std::get<1>(range) << ", " << std::get<2>(range) << ") ";
+				//				std::cout << "c=" << c << " s=" << s << " w=" << weight << " ";
+				//				std::cout << "node=(" << nodesX[k] << ", " << nodesY[k] << ") ";
 				nodesY[k] *= (1 - std::get<2>(range) * weight);
-//				std::cout << "--> node=(" << nodesX[k] << ", " << nodesY[k] << ") " << std::endl;
+				//				std::cout << "--> node=(" << nodesX[k] << ", " << nodesY[k] << ") " << std::endl;
 			}
 		}
 		// Compute inconsistency
@@ -390,4 +390,384 @@ void peakDetect(const arma::vec& signal,
 		if (emissionPeaks.size() == absorptionPeaks.size())
 			emissionPeaksProminence.push_back(signal[emissionPeaks.back()] - signal[absorptionPeaks.back()]);
 	}
+}
+
+void histogramCreation(QVector<double>& data,
+					   QVector<double>& x,
+					   QVector<double>& y,
+					   const double& barsStep){
+	arma::vec xx, yy, adata;
+	// Convert input to an arma vector
+	convert::qvec2arma(data, adata);
+	// Compute histogram
+	histogramCreation(adata, xx, yy, barsStep);
+	// Convert output to qt vector
+	convert::arma2qvec(xx, x);
+	convert::arma2qvec(yy, y);
+}
+
+void histogramCreation(arma::vec& data,
+					   arma::vec& x,
+					   arma::vec& y,
+					   const double& barsStep){
+	// Compute the histogram
+	x = arma::regspace(data.min(), barsStep, data.max());
+	y = arma::normalise(arma::conv_to<arma::vec>::from(arma::hist(data, x)), 1);
+}
+
+void convert::arma2qvec(const arma::vec& avec,
+						QVector<double>& qvec){
+	qvec.reserve(avec.size());
+	for(const double& d: avec) qvec << d;
+}
+
+void convert::qvec2arma(QVector<double> &qvec,
+						arma::vec &avec){
+	avec = arma::vec(qvec.data(), qvec.size(), false, true);
+}
+
+arma::vec gaussFit::fit(const arma::vec& x,
+						const arma::vec& y){
+	// Assign values to alglib-type array
+	alglib::real_2d_array xx;
+	alglib::real_1d_array yy;
+	xx.setcontent(x.size(), 1, x.memptr());
+	yy.setcontent(y.size(), y.memptr());
+	alglib::real_1d_array c = "[1.0, 0.0, 1.0]";
+	// Initialize other variables
+	alglib::lsfitstate state;
+	alglib::lsfitreport report;
+	alglib::ae_int_t maxIters = 40;
+	double epsF = 1e-6 * (x.max()-x.min());
+	double epsX = 1e-6;
+	// Initialize the algorithm
+	alglib::lsfitcreatefgh(xx, yy, c, state);
+	alglib::lsfitsetcond(state, epsF, epsX, maxIters);
+	alglib::ae_int_t info;
+	// Perform fitting
+	alglib::lsfitfit(state, gaussFit::funcVal, gaussFit::funcGrad, gaussFit::funcHess);
+	alglib::lsfitresults(state, info, c, report);
+	return arma::vec(c.getcontent(), c.length());
+}
+
+void gaussFit::coreFuncVal(const alglib::real_1d_array& c,
+						   const alglib::real_1d_array& x,
+						   double& func,
+						   void* ptr){
+	// Compute the function core value
+	func = std::exp( - std::pow(x[0]-c[1], 2.0) / (2.0*c[2]*c[2]) );
+}
+
+void gaussFit::funcVal(const alglib::real_1d_array& c,
+					   const alglib::real_1d_array& x,
+					   double& func,
+					   void* ptr){
+	// Compute the function value
+	coreFuncVal(c, x, func, ptr);
+	func *= c[0];
+}
+
+arma::vec gaussFit::eval(const arma::vec& c,
+						 const arma::vec& x){
+	double func;
+	alglib::real_1d_array cvec, xvec;
+	cvec.setcontent(c.size(), c.memptr());
+	arma::vec y(x.size());
+	for(uint64_t k = 0; k < x.size(); k++){
+		xvec.setcontent(1, x.memptr()+k);
+		funcVal(cvec, xvec, func, NULL);
+		y[k] = func;
+	}
+	return y;
+}
+
+void gaussFit::funcGrad(const alglib::real_1d_array& c,
+						const alglib::real_1d_array& x,
+						double& func,
+						alglib::real_1d_array& grad,
+						void* ptr){
+	// Compute the function value
+	funcVal(c, x, func, ptr);
+	// Compute the function gradient value
+	coreFuncVal(c, x, grad[0], ptr);
+	grad[1] = func * (x[0]-c[1]) / (c[2]*c[2]);
+	grad[2] = grad[1] * (x[0]-c[1]) / c[2];
+}
+
+void gaussFit::funcHess(const alglib::real_1d_array& c,
+						const alglib::real_1d_array& x,
+						double& func,
+						alglib::real_1d_array& grad,
+						alglib::real_2d_array& hess,
+						void* ptr){
+	// Compute the function value and the function gradient value
+	funcGrad(c, x, func, grad, ptr);
+	// Compute the function hessian value
+	double core2 = grad[0] / (c[2]*c[2]);
+	hess[0][0] = 0;
+	hess[0][1] = core2 * (x[0]-c[1]);
+	hess[1][0] = hess[0][1];
+	hess[0][2] = hess[0][1] * (x[0]-c[1]) / c[2];
+	hess[2][0] = hess[0][2];
+	core2 *= c[0] / (c[2]*c[2]);
+	hess[1][1] = - core2 * (-c[2]*c[2]+std::pow(c[1]-x[0], 2.0));
+	double core3 = core2 * (c[1]-x[0]);
+	hess[1][2] = hess[1][1] * (c[1]-x[0]) / c[2] + core3 * c[2];
+	hess[2][1] = hess[1][2];
+	hess[2][2] = hess[1][2] * (c[1]-x[0]) / c[2] + core3 * (c[1]-x[0]) / c[2];
+}
+
+void gaussFit::print(const alglib::lsfitreport& report){
+	std::cout << "average error = " << report.avgerror << std::endl;
+	std::cout << "average relative error = " << report.avgrelerror << std::endl;
+	std::cout << "maximum error = " << report.maxerror << std::endl;
+	std::cout << "iterations count = " << report.iterationscount << std::endl;
+	std::cout << "non-adjusted coefficient of determination = " << report.r2 << std::endl;
+	std::cout << "rms error on the (X,Y) = " << report.rmserror << std::endl;
+}
+
+arma::vec oversample(const arma::vec& samples,
+					 const double& factor){
+	// Convert to alglib vectors
+	alglib::real_1d_array x, y;
+	arma::vec armax = arma::regspace(0, double(samples.size())-1);
+	x.setcontent(samples.size(), armax.memptr());
+	y.setcontent(samples.size(), samples.memptr());
+	// Build interpolant
+	alglib::spline1dinterpolant interp;
+	alglib::spline1dbuildcatmullrom(x, y, interp);
+	// Compute the output values
+	double step = 1.0/factor, xx = 0.0;
+	arma::vec out(floor(samples.size()*factor));
+	for(uint64_t k = 0; k < out.size(); k++){
+		out[k] = alglib::spline1dcalc(interp, xx);
+		xx += step;
+	}
+	return out;
+}
+
+arma::mat weightMean(const arma::mat& X,
+					 const arma::mat& W){
+	if (not W.is_vec())
+		throw std::runtime_error("W must be a vector");
+	else {
+		if (W.size() > 1 and ((W.is_colvec() and X.n_rows != W.n_rows) or (W.is_rowvec() and X.n_cols != W.n_cols)))
+			throw std::runtime_error("Wrong dimensions");
+		else if (W.size() == 1 and X.n_rows != 1 and X.n_cols != 1)
+			throw std::runtime_error("Wrong dimensions");
+		else {
+			if (W.size() == 1 and X.n_rows == 1)
+				return arma::sum(X.each_col() % arma::normalise(W, 1), 0);
+			else if (W.size() == 1 and X.n_cols == 1)
+				return arma::sum(X.each_row() % arma::normalise(W, 1), 1);
+			else if(W.is_colvec())
+				return arma::sum(X.each_col() % arma::normalise(W, 1), 0);
+			else
+				return arma::sum(X.each_row() % arma::normalise(W, 1), 1);
+		}
+	}
+}
+
+arma::mat weightCov(const arma::mat& X,
+					const arma::vec& W){
+	// row - observations, col - variables
+	// Check dimensions
+	if (X.n_rows != W.n_rows) throw std::runtime_error("X and W must have the same number of columns");
+	// Compute the weighted mean along the observations
+	arma::rowvec m = weightMean(X, W);
+	// Compute the covariance matrix
+	arma::vec NW = arma::normalise(W, 1);
+	arma::mat C(X.n_cols, X.n_cols);
+	C.zeros();
+	for(arma::uword i = 0; i < X.n_rows; i++){
+		C += (X.row(i)-m).t() * (X.row(i)-m) * NW(i);
+	}
+	return C;
+}
+
+arma::vec gaussExpFit::fit(const arma::vec& x,
+						   const arma::vec& y){
+	// Assign values to alglib-type array
+	alglib::real_2d_array xx;
+	alglib::real_1d_array yy;
+	xx.setcontent(x.size(), 1, x.memptr());
+	yy.setcontent(y.size(), y.memptr());
+	alglib::real_1d_array c = "[6, 1, 1, 40]";
+	// Initialize other variables
+	alglib::lsfitstate state;
+	alglib::lsfitreport report;
+	alglib::ae_int_t maxIters = 0;
+	double epsF = 1e-10 * (x.max()-x.min());
+	double epsX = 1e-10;
+	// Initialize the algorithm
+	alglib::lsfitcreatefgh(xx, yy, c, state);
+	alglib::lsfitsetcond(state, epsF, epsX, maxIters);
+	alglib::ae_int_t info;
+	// Perform fitting
+	alglib::lsfitfit(state, gaussExpFit::funcVal, gaussExpFit::funcGrad, gaussExpFit::funcHess);
+	alglib::lsfitresults(state, info, c, report);
+	return arma::vec(c.getcontent(), c.length());
+}
+
+arma::vec gaussExpFit::eval(const arma::vec& c,
+							const arma::vec& x){
+	double func;
+	alglib::real_1d_array cvec, xvec;
+	cvec.setcontent(c.size(), c.memptr());
+	arma::vec y(x.size());
+	for(uint64_t k = 0; k < x.size(); k++){
+		xvec.setcontent(1, x.memptr()+k);
+		funcVal(cvec, xvec, func, NULL);
+		y[k] = func;
+	}
+	return y;
+}
+
+void gaussExpFit::funcVal(const alglib::real_1d_array& cc,
+					   const alglib::real_1d_array& xx,
+					   double& func,
+					   void* ptr){
+	// Take useful references
+	const double& c = cc[0], a = cc[1], s = cc[2], t = cc[3], x = xx[0];
+	// Useful quantities
+	double c_x = c-x;
+	double c_xt = c_x * t;
+	double s2 = s * s;
+	double A = s2 + c_xt;
+	double B = A/(M_SQRT2 * s * t);
+	double _2t = 2 * t;
+	double C = (A + c_xt)/(_2t * t);
+	double a_2t = a / _2t;
+	double erfcB = std::erfc(B);
+	double expC = std::exp(C);
+	
+	// Compute the function value
+	func = a_2t * expC * erfcB;
+}
+
+void gaussExpFit::funcGrad(const alglib::real_1d_array& cc,
+						   const alglib::real_1d_array& xx,
+						   double& func,
+						   alglib::real_1d_array& grad,
+						   void* ptr){
+	// Take useful references
+	const double& c = cc[0], a = cc[1], s = cc[2], t = cc[3], x = xx[0];
+	// Useful quantities
+	double c_x = c-x;
+	double c_xt = c_x * t;
+	double s2 = s * s;
+	double A = s2 + c_xt;
+	double F = s2 - c_xt;
+	double B = A/(M_SQRT2 * s * t);
+	double B2 = B*B;
+	double _2t = 2 * t;
+	double C = (A + c_xt)/(_2t * t);
+	double a_2t = a / _2t;
+	double erfcB = std::erfc(B);
+	double expC = std::exp(C);
+	double E = std::exp(- c_x * c_x / (2 * s2) );
+	double aE = a * E;
+	double expB2 = std::exp(B2);
+	double SQRTPI = 2.0/M_2_SQRTPI;
+	double _2SQRTPI = 2.0 * SQRTPI;
+	double SQRT2PI = M_SQRT2 * SQRTPI;
+	double t2 = t * t;
+	double t3 = t2 * t;
+	double t4 = t3 * t;
+	
+	// Compute the function value
+	func = a_2t * expC * erfcB;
+	// Compute the function gradient value
+	grad[0] = aE * ( - M_SQRT2 * t + SQRTPI * s * expB2 * erfcB ) / (_2SQRTPI * s * t2);
+	grad[1] = expC * erfcB / _2t;
+	grad[2] = - F * aE / (SQRT2PI * s2 * t2) + expB2 * aE * s * erfcB / (2 * t3);
+	grad[3] = - aE * ( - M_SQRT2 * s * t + expB2 * SQRTPI * (s2 + t*(c_x+t)) * erfcB ) / (_2SQRTPI * t4);
+}
+
+void gaussExpFit::funcHess(const alglib::real_1d_array& cc,
+						   const alglib::real_1d_array& xx,
+						   double& func,
+						   alglib::real_1d_array& grad,
+						   alglib::real_2d_array& hess,
+						   void* ptr){
+	// Take useful references
+	const double& c = cc[0], a = cc[1], s = cc[2], t = cc[3], x = xx[0];
+	// Useful quantities
+	double c_x = c-x;
+	double c_xt = c_x * t;
+	double s2 = s * s;
+	double A = s2 + c_xt;
+	double F = s2 - c_xt;
+	double B = A / (M_SQRT2 * s * t);
+	double B2 = B * B;
+	double _2t = 2 * t;
+	double C = (A + c_xt) / (_2t * t);
+	double a_2t = a / _2t;
+	double erfcB = std::erfc(B);
+	double expC = std::exp(C);
+	double E = std::exp(- c_x * c_x / (2 * s2) );
+	double aE = a * E;
+	double expB2 = std::exp(B2);
+	double SQRT2_PI = M_2_SQRTPI*M_SQRT1_2;
+	double SQRTPI = 2.0/M_2_SQRTPI;
+	double _2SQRTPI = 2.0 * SQRTPI;
+	double SQRT2PI = M_SQRT2 * SQRTPI;
+	double t2 = t * t;
+	double t3 = t2 * t;
+	double s3 = s2 * s;
+	double s4 = s3 * s;
+	double t4 = t3 * t;
+	double s5 = s3 * s2;
+	double t5 = t4 * t;
+	double exp_B2 = 1.0 / expB2;
+	double s6 = s5 * s;
+	double t6 = t5 * t;
+	double c_xt2 = c_xt * c_xt;
+	double c_xt3 = c_xt2 * c_xt;
+	
+	// Compute the function value
+	func = a_2t * expC * erfcB;
+	// Compute the function gradient value
+	grad[0] = aE * ( - M_SQRT2 * t + SQRTPI * s * expB2 * erfcB ) / (_2SQRTPI * s * t2);
+	grad[1] = expC * erfcB / _2t;
+	grad[2] = - F * aE / (SQRT2PI * s2 * t2) + expB2 * aE * s * erfcB / (2 * t3);
+	grad[3] = - aE * ( - M_SQRT2 * s * t + expB2 * SQRTPI * (s2 + t*(c_x+t)) * erfcB ) / (_2SQRTPI * t4);
+	// Compute the function hessian matrix
+	hess[0][0] = aE * (-F * SQRT2_PI * t / s3 + expB2 * erfcB) / (2 * t3);
+	hess[1][0] = expC * (- exp_B2 * SQRT2_PI * t / s + erfcB) / (2 * t2);
+	hess[0][1] = hess[1][0];
+	hess[1][1] = 0.0;
+	hess[2][0] = aE * (- M_SQRT2 * t * (s4 + c_xt2 - s2 * t * (c_x + t)) + expB2 * SQRTPI * s5 * erfcB) / (_2SQRTPI * s4 * t4);
+	hess[0][2] = hess[2][0];
+	hess[2][1] = -F * E / (SQRT2PI * s2 * t2) + (expB2 * E * s * erfcB) / (2 * t3);
+	hess[1][2] = hess[2][1];
+	hess[2][2] = aE * (-M_SQRT2 * t * (s6 - c_xt * s4 - c_xt3 + c_x * s2 * t2 * (c_x + 2*t)) + expB2 * SQRTPI * s5 * (s2 + t2) * erfcB) / (_2SQRTPI * s5 * t5);
+	hess[3][0] = aE * (SQRT2_PI * t * (s2 + t2) - expB2 * s * (s2 + t * (c_x + 2*t)) * erfcB) / (2 * s * t5);
+	hess[0][3] = hess[3][0];
+	hess[3][1] = E * s / (SQRT2PI * t3) - expB2 * E * (s2 + t * (c_x + t)) * erfcB / (2 * t4);
+	hess[1][3] = hess[3][1];
+	hess[3][2] = aE * (s4 + 2 * s2 * t2 - c_x * t3) / (SQRT2PI * s2 * t5) - expB2 * aE * s * (s2 + t * (c_x + 3 * t)) * erfcB / (2 * t6);
+	hess[2][3] = hess[3][2];
+	hess[3][3] = aE * (-M_SQRT2 * s * t * (s2 + t * (c_x + 4 * t)) + expB2 * SQRTPI * erfcB * (s4 + s2 * t * (2 * c_x + 5 * t) + t2 * (c_x*c_x + 4 * c_xt + 2 * t2))) / (_2SQRTPI * t6 * t);
+	
+//	std::cout << "Hessian function" << std::endl;
+//	std::cout << "coeff: "; for(int k = 0; k < cc.length(); k++) std::cout << cc[k] << " "; std::cout << std::endl;
+//	std::cout << "func: " << func << std::endl;
+//	std::cout << "grad: "; for(int k = 0; k < grad.length(); k++) std::cout << grad[k] << " "; std::cout << std::endl;
+//	std::cout << "hess: ";
+//	for(int i = 0; i < hess.rows(); i++) {
+//		for(int j = 0; j < hess.cols(); j++)
+//			std::cout << hess[i][j] << " ";
+//		std::cout << std::endl;
+//	}
+//	std::cout << std::endl;
+}
+
+void gaussExpFit::print(const alglib::lsfitreport& report){
+	std::cout << "average error = " << report.avgerror << std::endl;
+	std::cout << "average relative error = " << report.avgrelerror << std::endl;
+	std::cout << "maximum error = " << report.maxerror << std::endl;
+	std::cout << "iterations count = " << report.iterationscount << std::endl;
+	std::cout << "non-adjusted coefficient of determination = " << report.r2 << std::endl;
+	std::cout << "rms error on the (X,Y) = " << report.rmserror << std::endl;
 }

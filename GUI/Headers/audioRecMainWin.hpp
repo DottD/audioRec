@@ -24,6 +24,9 @@
 #include <ui_audioRecMain.h>
 #include <Headers/AudioProcess.hpp>
 #include <Headers/VoiceFeatures.hpp>
+#include <Headers/DBInterpreter.hpp>
+#include <Headers/DatabaseChart.hpp>
+#include <Headers/Matching.hpp>
 
 namespace Ui {
 	class AudioRecMainWin;
@@ -57,15 +60,27 @@ private:
 											   const QStringList& exts = {});
 	
 	private slots:
+	
+	/** Display an error.
+	 Displays an error as a popup, with optional description, without quitting the graphical interface.
+	 */
+	void popupError(QString errorDescription = "");
+	
+	/** Handle log scale checkbox. */
+	void on_CheckLogScale_stateChanged(int state);
+	
+	// Features Creation tab callbacks *********************************
+	
 	/** Input browse button callback.
 	 Opens a file dialog when the input browse button is pressed.
 	 */
 	void on_ButtonInputBrowse_clicked();
 	
-	/** Input database browse button callback.
-	 Opens a file dialog when the input browse button is pressed.
+	/** Input line edit callback.
+	 This callback executes whenever the text in the widget changes. It automatically updates the
+	 combo box with the list of audio files found.
 	 */
-	void on_ButtonInputBrowseDB_clicked();
+	void on_LineEditInput_textChanged(QString);
 	
 	/** Output browse button callback.
 	 Opens a file dialog when the output browse button is pressed
@@ -78,6 +93,66 @@ private:
 	 */
 	void on_ButtonCompute_clicked();
 	
+	/** Handle the processEnded signal emitted by AudioProcess.
+	 This function updates the completion label every time an instance of AudioProcess finishes running.
+	 */
+	void on_OneProcessEnded(QSharedPointer<QDir>);
+	
+	/** Draw the given image in the window and save it in the output folder. */
+	void on_imageGenerated(QSharedPointer<QDir> inputDir, QSharedPointer<QImage> image);
+	
+	/** Change image description. */
+	void on_changedImage(QString);
+	
+	/** Show next image in list. */
+	void on_ButtonNextImage_clicked();
+	
+	/** Show previous image in list. */
+	void on_ButtonPrevImage_clicked();
+	
+	/** Save the feature vector to file.
+	 Activated when a new feature vector is computed.
+	 */
+	void on_newFeatures(QSharedPointer<QDir> dir,
+						QSharedPointer<QVector<QVector<double>>> features);
+	
+	// File Inspectors tab callbacks *********************************
+	
+	/** Combo box for file choice callback.
+	 This callback is executed whenever the user click on a choice in the combo box.
+	 This function executes a thread to load the selected audio file, and then make the first record show.
+	 */
+	void on_ComboChooseFile_activated(QString);
+	
+	/** Send to charts the command to display the next record */
+	void on_ButtonNextRecord_clicked();
+	
+	/** Send to charts the command to display the previous record */
+	void on_ButtonPreviousRecord_clicked();
+	
+	// Parameters tab callbacks *********************************
+	
+	/** Save the parameter with maximum frequency specification. */
+	void on_ButtonGroupMaxFreq_buttonClicked(QAbstractButton*);
+	
+	/** Save the parameter with minimum frequency specification. */
+	void on_ButtonGroupMinFreq_buttonClicked(QAbstractButton*);
+	
+	/** Save the parameter with minimum frequency specification. */
+	void on_ButtonGroupOversampling_buttonClicked(QAbstractButton*);
+	
+	// DB Creation tab callbacks *********************************
+	
+	/** Input intra-speaker database browse button callback.
+	 Opens a file dialog when the input browse button is pressed.
+	 */
+	void on_ButtonIntraBrowseDB_clicked();
+	
+	/** Input extra-speaker database browse button callback.
+	 Opens a file dialog when the input browse button is pressed.
+	 */
+	void on_ButtonExtraBrowseDB_clicked();
+	
 	/** Callback that resets the view to its original zoom and scroll. */
 	void on_ButtonResetView_clicked();
 	
@@ -86,81 +161,31 @@ private:
 	 */
 	void on_ButtonCreateDatabase_clicked();
 	
-	/** Input line edit callback.
-	 This callback executes whenever the text in the widget changes. It automatically updates the
-	 combo box with the list of audio files found.
-	 */
-	void on_LineEditInput_textChanged(QString);
-	
-	/** Combo box for file choice callback.
-	 This callback is executed whenever the user click on a choice in the combo box.
-	 This function executes a thread to load the selected audio file, and then make the first record show.
-	 */
-	void on_ComboChooseFile_activated(QString);
-	
-	/** Display an error.
-	 Displays an error as a popup, with optional description, without quitting the graphical interface.
-	 */
-	void popupError(QString errorDescription = "");
-
-	/** Handle the processEnded signal emitted by AudioProcess.
-	 This function updates the completion label every time an instance of AudioProcess finishes running.
-	 */
-	void on_OneProcessEnded(QSharedPointer<QDir>);
-	
-	/** Save the parameter with record length specification. */
-	void on_ButtonGroupRecLength_buttonClicked(QAbstractButton*);
-	
-	/** Save the parameter with tail suppression specification.
-	 Changes accordingly the other paramters related to the tail suppression.
-	 */
-	void on_SliderParTailSuppression_valueChanged(int value);
-	
-	/** Save the parameter with bin width specification. */
-	void on_ButtonGroupBinWidth_buttonClicked(QAbstractButton*);
-	
-	/** Save the parameter with peaks relevance specification.
-	 Changes accordingly the other paramters related to the peaks relevance.
-	 */
-	void on_SliderParPeaksRelevance_valueChanged(int value);
-	
-	void on_SliderPeakHeightThreshold_valueChanged(int value);
-	
-	/** Send to charts the command to display the next record */
-	void on_ButtonNextRecord_clicked();
-	
-	/** Send to charts the command to display the previous record */
-	void on_ButtonPreviousRecord_clicked();
-	
-	/** Handle log scale checkbox. */
-	void on_CheckLogScale_stateChanged(int state){
-		if (ui->CheckLogScale->isChecked()){
-			ui->ChartShowRecSpectrum->setLogScale();
-		} else {
-			ui->ChartShowRecSpectrum->setNaturalScale();
-		}
-	}
-	
-	/** Draw the given image in the window and save it in the output folder. */
-	void on_imageGenerated(QSharedPointer<QDir> inputDir, QSharedPointer<QImage> image);
-	
-	/** Show next image in list. */
-	void on_ButtonNextImage_clicked();
-	
-	/** Show previous image in list. */
-	void on_ButtonPrevImage_clicked();
+	/** Save the database to file. */
+	void on_DBCreated();
 	
 	/** Clear the DB graphic view. */
 	void on_ButtonCleanPlot_clicked();
 	
-	/** Change image description. */
-	void on_changedImage(QString);
+	// Matching tab callbacks *********************************
 	
-	/** Save the feature vector to file.
-	 Activated when a new feature vector is computed.
-	 */
-	void on_newFeatures(QSharedPointer<QDir> dir,
-						QSharedPointer<QVector<QVector<double>>> features);
+	/** Matching tab - plot reset callback. */
+	void on_ButtonResetMatching_clicked();
+	
+	/** Matching tab - start matching callback. */
+	void on_ButtonStartMatching_clicked();
+	
+	/** Matching tab - handle the newly computed score. */
+	void on_newScore(QList<QVariant>);
+	
+	/** Matching tab - input DB browse button callback. */
+	void on_ButtonBrowseDB_clicked();
+	
+	/** Matching tab - culprit audio browse button callback. */
+	void on_ButtonBrowseCulprit_clicked();
+	
+	/** Matching tab - suspects folder browse button callback. */
+	void on_ButtonBrowseSuspects_clicked();
 	
 signals:
 	/** Signal emitted when a file path has been selected */

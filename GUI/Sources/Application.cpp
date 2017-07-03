@@ -75,13 +75,28 @@ Ui::Parameter::Parameter(ParName key){
 			set(double(0.1));
 			break;
 		case ParPeaksRelevance:
-			set(double(0.3));
+			set(double(0.2));
 			break;
 		case ParPeakMinVariationInfluence:
 			set(double(0.01));
 			break;
 		case ParPeakHeightThreshold:
-			set(double(0.03));
+			set(double(0.01));
+			break;
+		case ParBarsStep:
+			set(double(0.05));
+			break;
+		case ParRecWFactor:
+			set(double(2.5));
+			break;
+		case ParMaxFreq:
+			set(double(6*1024));
+			break;
+		case ParMinFreq:
+			set(double(4*64));
+			break;
+		case ParOversampling:
+			set(int(1));
 			break;
 	}
 }
@@ -144,6 +159,21 @@ bool Ui::Parameter::isIntParameter(ParName key) {
 			break;
 		case ParPeakHeightThreshold:
 			return false;
+			break;
+		case ParBarsStep:
+			return false;
+			break;
+		case ParRecWFactor:
+			return false;
+			break;
+		case ParMaxFreq:
+			return false;
+			break;
+		case ParMinFreq:
+			return false;
+			break;
+		case ParOversampling:
+			return true;
 			break;
 	}
 }

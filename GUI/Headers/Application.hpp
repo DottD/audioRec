@@ -31,6 +31,9 @@ public:
 	enum ParName : uint {
 		ParNull,
 		ParRecLength,
+		ParMaxFreq,
+		ParMinFreq,
+		ParOversampling,
 		ParGaussFilterRad,
 		ParBackEstMinFilterRad,
 		ParBackEstMaxPeakWidthAllowed,
@@ -45,7 +48,9 @@ public:
 		ParTailSuppression,
 		ParPeaksRelevance,
 		ParPeakMinVariationInfluence,
-		ParPeakHeightThreshold
+		ParPeakHeightThreshold,
+		ParBarsStep,
+		ParRecWFactor
 	};
 	
 private:

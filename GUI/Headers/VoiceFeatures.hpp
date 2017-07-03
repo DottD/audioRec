@@ -7,6 +7,7 @@
 #include <QDataStream>
 #include <QtCharts>
 #include <armadillo>
+#include <Headers/functions.hpp>
 
 namespace Ui {
 	class VoiceFeatures;

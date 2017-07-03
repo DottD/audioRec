@@ -11,7 +11,8 @@ fileCount(0) {
 	// Set the line edit as drag and drop receiver
 	ui->LineEditInput->setDragEnabled(true);
 	ui->LineEditOutput->setDragEnabled(true);
-	ui->LineEditInputDB->setDragEnabled(true);
+	ui->LineEditIntraDB->setDragEnabled(true);
+	ui->LineEditExtraDB->setDragEnabled(true);
 	// Set icons for record scrolling buttons
 	ui->ButtonPreviousRecord->setIcon(QIcon(":/48x48/Prev.png"));
 	ui->ButtonNextRecord->setIcon(QIcon(":/48x48/Successive.png"));
@@ -29,43 +30,21 @@ fileCount(0) {
 			this, SLOT(popupError(QString)));
 	connect(ui->LabelMatrixView, SIGNAL(changedImage(QString)),
 			this, SLOT(on_changedImage(QString)));
-	// Set initial record length
-	{
-		int recLength = Parameters::getParameter(Parameter::ParRecLength).toInt();
-		QListIterator<QAbstractButton*> button(ui->ButtonGroupRecLength->buttons());
-		while (button.hasNext()) {
-			if (QLocale().toString(recLength) == button.peekNext()->text())
-				button.next()->setChecked(true);
-			else button.next()->setChecked(false);
-		}
+	// Set initial parameters
+	QString maxFreqText = QLocale().toString(Parameters::getParameter(Parameter::ParMaxFreq).toDouble()/1024);
+	for(QAbstractButton* button : ui->ButtonGroupMaxFreq->buttons()){
+		if (button->text() == maxFreqText) button->setChecked(true);
+		else button->setChecked(false);
 	}
-	// Set initial tail suppression slider value
-	{
-		double tailsupp = Parameters::getParameter(Parameter::ParTailSuppression).toDouble();
-		QSlider* slider = ui->SliderParTailSuppression;
-		slider->setValue( slider->minimum() + int(tailsupp * double(slider->maximum()-slider->minimum())) );
+	QString minFreqText = QLocale().toString(Parameters::getParameter(Parameter::ParMinFreq).toDouble()/64);
+	for(QAbstractButton* button : ui->ButtonGroupMinFreq->buttons()){
+		if (button->text() == minFreqText) button->setChecked(true);
+		else button->setChecked(false);
 	}
-	// Set initial bin width
-	{
-		int binWidth = Parameters::getParameter(Parameter::ParBinWidth).toInt();
-		QListIterator<QAbstractButton*> button(ui->ButtonGroupBinWidth->buttons());
-		while (button.hasNext()) {
-			if (QLocale().toString(binWidth) == button.peekNext()->text())
-				button.next()->setChecked(true);
-			else button.next()->setChecked(false);
-		}
-	}
-	// Set initial tail suppression slider value
-	{
-		double peaksrel = Parameters::getParameter(Parameter::ParPeaksRelevance).toDouble();
-		QSlider* slider = ui->SliderParPeaksRelevance;
-		slider->setValue( slider->minimum() + int(peaksrel * double(slider->maximum()-slider->minimum())) );
-	}
-	// Set initial peak height threshold slider value
-	{
-		double peaksrel = Parameters::getParameter(Parameter::ParPeakHeightThreshold).toDouble();
-		QSlider* slider = ui->SliderParPeaksRelevance;
-		slider->setValue( slider->minimum() + int(peaksrel * double(slider->maximum()-slider->minimum())) );
+	QString oversamplingText = QLocale().toString(Parameters::getParameter(Parameter::ParOversampling).toInt()).prepend('x');
+	for(QAbstractButton* button : ui->ButtonGroupOversampling->buttons()){
+		if (button->text() == oversamplingText) button->setChecked(true);
+		else button->setChecked(false);
 	}
 	// Set chart names
 	ui->ChartShowRec->chart()->setTitle("Time domain");
@@ -84,60 +63,13 @@ Ui::AudioRecMainWin::~AudioRecMainWin(){
 	delete ui;
 }
 
-void Ui::AudioRecMainWin::on_ButtonInputBrowse_clicked(){
-	// Create and execute a file browser process
-	QFileDialog fileBrowser(this);
-	fileBrowser.setWindowTitle("Select a file or a folder");
-	fileBrowser.setFileMode(QFileDialog::FileMode::AnyFile);
-	fileBrowser.setLabelText(QFileDialog::DialogLabel::Accept, "Load");
-	fileBrowser.setLabelText(QFileDialog::DialogLabel::Reject, "Cancel");
-	fileBrowser.setFilter(QDir::Filter::NoDotAndDotDot|QDir::Filter::Files|QDir::Filter::Dirs);
-	fileBrowser.setNameFilters({"*.wav"});
-	if (fileBrowser.exec()){
-		// Check if there is at least a selected file
-		if (fileBrowser.selectedFiles().isEmpty()) throw std::runtime_error("No selected files or folders");
-		// Get the selected file path
-		QString fileName = fileBrowser.selectedFiles().first(); // absolute path
-		// Share path with the line edit
-		ui->LineEditInput->setText(fileName);
-	}
-}
-
-void Ui::AudioRecMainWin::on_ButtonOutputBrowse_clicked(){
-	/* Create and execute a file browser process */
-	QFileDialog fileBrowser(this);
-	fileBrowser.setWindowTitle("Select a folder");
-	fileBrowser.setFileMode(QFileDialog::FileMode::Directory);
-	fileBrowser.setLabelText(QFileDialog::DialogLabel::Accept, "Choose");
-	fileBrowser.setLabelText(QFileDialog::DialogLabel::Reject, "Cancel");
-	fileBrowser.setFilter(QDir::Filter::NoDotAndDotDot|QDir::Filter::Dirs);
-	if (fileBrowser.exec()){
-		// Check if there is at least a selected file
-		if (fileBrowser.selectedFiles().isEmpty()) throw std::runtime_error("No selected folders");
-		// Get the selected file path
-		QString fileName = fileBrowser.selectedFiles().first(); // absolute path
-		// Share path with the line edit
-		ui->LineEditOutput->setText(fileName);
-	}
-}
-
-void Ui::AudioRecMainWin::on_ButtonInputBrowseDB_clicked(){
-	// Create and execute a file browser process
-	QFileDialog fileBrowser(this);
-	fileBrowser.setWindowTitle("Select a file or a folder");
-	fileBrowser.setFileMode(QFileDialog::FileMode::AnyFile);
-	fileBrowser.setLabelText(QFileDialog::DialogLabel::Accept, "Load");
-	fileBrowser.setLabelText(QFileDialog::DialogLabel::Reject, "Cancel");
-	fileBrowser.setFilter(QDir::Filter::NoDotAndDotDot|QDir::Filter::Files|QDir::Filter::Dirs);
-	fileBrowser.setNameFilters({"*.feat"});
-	if (fileBrowser.exec()){
-		// Check if there is at least a selected file
-		if (fileBrowser.selectedFiles().isEmpty()) throw std::runtime_error("No selected files or folders");
-		// Get the selected file path
-		QString fileName = fileBrowser.selectedFiles().first(); // absolute path
-		// Share path with the line edit
-		ui->LineEditInputDB->setText(fileName);
-	}
+void Ui::AudioRecMainWin::popupError(QString errorDescription) {
+	QMessageBox errorDispatcher;
+	errorDispatcher.setWindowTitle("Error");
+	errorDispatcher.setStandardButtons(QMessageBox::StandardButton::Ok);
+	errorDispatcher.setDefaultButton(QMessageBox::StandardButton::Ok);
+	errorDispatcher.setText(errorDescription);
+	errorDispatcher.exec();
 }
 
 QSharedPointer<QStringList> Ui::AudioRecMainWin::listFilesInDir(QSharedPointer<QDir> dir,
@@ -164,6 +96,43 @@ QSharedPointer<QStringList> Ui::AudioRecMainWin::listFilesInDir(QSharedPointer<Q
 	return audioFiles; // possibly empty
 }
 
+void Ui::AudioRecMainWin::on_CheckLogScale_stateChanged(int state){
+	if (ui->CheckLogScale->isChecked()){
+		ui->ChartShowRecSpectrum->setLogScale();
+	} else {
+		ui->ChartShowRecSpectrum->setNaturalScale();
+	}
+}
+
+// Features Creation tab callbacks
+
+void Ui::AudioRecMainWin::on_ButtonInputBrowse_clicked(){
+	// Create and execute a file browser process
+	QString folderName = QFileDialog::getExistingDirectory(this, "Select a folder with audio files");
+	// Check if the user pressed cancel
+	if (folderName.isEmpty()) return;
+	// Share path with the line edit
+	ui->LineEditInput->setText(folderName);
+}
+
+void Ui::AudioRecMainWin::on_LineEditInput_textChanged(QString text){
+	// Scan for audio files in the given path
+	QSharedPointer<QDir> dir(new QDir(text));
+	QSharedPointer<QStringList> audioFiles = listFilesInDir(dir, false /*return only file names*/, supportedAudioFormats);
+	// List options in the combo box
+	while(ui->ComboChooseFile->count() > 0) ui->ComboChooseFile->removeItem(0);
+	ui->ComboChooseFile->addItems(*audioFiles);
+}
+
+void Ui::AudioRecMainWin::on_ButtonOutputBrowse_clicked(){
+	// Create and execute a file browser process
+	QString folderName = QFileDialog::getExistingDirectory(this, "Select a folder with audio files");
+	// Check if the user pressed cancel
+	if (folderName.isEmpty()) return;
+	// Share path with the line edit
+	ui->LineEditOutput->setText(folderName);
+}
+
 void Ui::AudioRecMainWin::on_ButtonCompute_clicked(){
 	// Roughly check input and output
 	if (ui->LineEditInput->text().isEmpty()) {ui->LineEditInput->setPlaceholderText("An input file or folder must be provided!");return;}
@@ -176,7 +145,7 @@ void Ui::AudioRecMainWin::on_ButtonCompute_clicked(){
 	QSharedPointer<QDir> inputPath(new QDir(ui->LineEditInput->text()));
 	QSharedPointer<QStringList> audioFiles = listFilesInDir(inputPath, true, supportedAudioFormats);
 	// Check if there are file names in the list
-	if (audioFiles->isEmpty()) {popupError("Input is neither a folder nor a file");return;}
+	if (audioFiles->isEmpty()) {popupError("Input folder is not suitable");return;}
 	// Store the number of files found
 	fileCount = audioFiles->count();
 	
@@ -197,98 +166,6 @@ void Ui::AudioRecMainWin::on_ButtonCompute_clicked(){
 	}
 }
 
-void Ui::AudioRecMainWin::on_ButtonResetView_clicked(){
-	ui->BarSetDB->chart()->zoomReset();
-}
-
-void Ui::AudioRecMainWin::on_ButtonCreateDatabase_clicked(){
-	// Check if it input is empty
-	if (ui->LineEditInputDB->text().isEmpty()) return;
-	// Get the list of files in the input directory
-	QSharedPointer<QDir> dir(new QDir(ui->LineEditInputDB->text()));
-	QSharedPointer<QStringList> fileNames = listFilesInDir(dir, true, {"*.feat"});
-	// Load each file and compare with any other (apart from it)
-	QFile out_file, inn_file;
-	VoiceFeatures out_feat, inn_feat;
-	arma::vec distances(fileNames->size() * (fileNames->size()-1));
-	unsigned int k = 0;
-	qDebug() << fileNames->size();
-	for (const QString& out_name: *fileNames){
-		// Read current features vector from file
-		out_file.setFileName(out_name);
-		out_feat.readFromFile(out_file);
-		// Loop over the same list of files, looking for string different from "name"
-		for (const QString& inn_name: *fileNames){
-			// Check if the inner name is the same of the outer
-			if (out_name == inn_name) continue;
-			// Load the inner feature vector from file
-			inn_file.setFileName(inn_name);
-			inn_feat.readFromFile(inn_file);
-			// Compute the distance between the vectors
-			distances(k++) = out_feat.distance(inn_feat);
-		}
-	}
-	// Compute the histogram of the distances
-	// Div by 2 due to the repetition of feature vectors pairs
-	double mindist = distances.min();
-	double maxdist = distances.max();
-	double distStep = 0.05;
-	arma::vec barpos = arma::regspace(mindist, distStep, maxdist);
-//	arma::vec barpos = arma::linspace(mindist, maxdist, 25);
-	arma::uvec uhist = arma::hist(distances, barpos) / 2;
-	arma::vec hist = arma::normalise(arma::conv_to<arma::vec>::from(uhist), 1);
-	// Chart appearence
-	QChart* chart = ui->BarSetDB->chart();
-	chart->setTitle("Distribution");
-	chart->setTheme(QChart::ChartThemeBlueCerulean);
-	chart->setAnimationOptions(QChart::AnimationOption::AllAnimations);
-	ui->BarSetDB->setRubberBand(QChartView::RubberBand::RectangleRubberBand);
-	chart->legend()->setVisible(false);
-	// Select a color for the histogram
-	std::random_device rd;  //Will be used to obtain a seed for the random number engine
-	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
-	std::uniform_real_distribution<> dis(0.4, 0.9);
-	QColor newColor = QColor::fromRgbF(dis(gen), dis(gen), dis(gen), 0.7);
-	// Draw the rectangles composing the histogram
-	double recWFactor = 2.5;
-	for (unsigned int k = 0; k < hist.size(); k++){
-		QLineSeries* topLine = new QLineSeries;
-		*topLine << QPointF(barpos(k)-distStep/recWFactor, hist(k)) << QPointF(barpos(k)+distStep/recWFactor, hist(k));
-		QAreaSeries* rectangle = new QAreaSeries(topLine);
-		rectangle->setColor(newColor);
-		rectangle->setBorderColor(QColor(0, 0, 0, 0));
-		chart->addSeries(rectangle);
-	}
-	// Plot the histogram
-	chart->createDefaultAxes();
-}
-
-void Ui::AudioRecMainWin::on_ButtonCleanPlot_clicked(){
-	ui->BarSetDB->chart()->removeAllSeries();
-}
-
-void Ui::AudioRecMainWin::on_LineEditInput_textChanged(QString text){
-	// Scan for audio files in the given path
-	QSharedPointer<QDir> dir(new QDir(text));
-	QSharedPointer<QStringList> audioFiles = listFilesInDir(dir, false /*return only file names*/, supportedAudioFormats);
-	// List options in the combo box
-	while(ui->ComboChooseFile->count() > 0) ui->ComboChooseFile->removeItem(0);
-	ui->ComboChooseFile->addItems(*audioFiles);
-}
-
-void Ui::AudioRecMainWin::on_ComboChooseFile_activated(QString text){
-	// Retrieve all possible audio files paths
-	QSharedPointer<QDir> dir(new QDir(text));
-	QSharedPointer<QDir> inputDir(new QDir(ui->LineEditInput->text()));
-	QSharedPointer<QStringList> audioFiles = listFilesInDir(inputDir, true /*return file paths*/, supportedAudioFormats);
-	// Search the current selected file among them
-	QSharedPointer<QStringList> selectedFile(new QStringList(audioFiles->filter(text)));
-	if (selectedFile->size() != 1) {popupError("Only one file should be returned"); return;}
-	// Create a dir from that file and pass it to the widgets
-	QSharedPointer<QDir> selectedDir(new QDir(selectedFile->first()));
-	emit readyToDisplay(selectedDir);
-}
-
 void Ui::AudioRecMainWin::on_OneProcessEnded(QSharedPointer<QDir> dir){
 	// Increase the processed counter
 	processed++;
@@ -296,31 +173,6 @@ void Ui::AudioRecMainWin::on_OneProcessEnded(QSharedPointer<QDir> dir){
 	QString completion = "Done: " + dir->dirName() + " " + QString::number(processed) + "/" + QString::number(fileCount);
 	// Show completion
 	ui->LabelCompletion->setText(completion);
-}
-
-void Ui::AudioRecMainWin::popupError(QString errorDescription) {
-	QMessageBox errorDispatcher;
-	errorDispatcher.setWindowTitle("Error");
-	errorDispatcher.setStandardButtons(QMessageBox::StandardButton::Ok);
-	errorDispatcher.setDefaultButton(QMessageBox::StandardButton::Ok);
-	errorDispatcher.setText(errorDescription);
-	errorDispatcher.exec();
-}
-
-void Ui::AudioRecMainWin::on_ButtonNextRecord_clicked(){
-	quint64 idx1 = ui->ChartShowRec->stepUp();
-	quint64 idx2 = ui->ChartShowRecSpectrum->stepUp();
-	if (idx1 == idx2){
-		ui->LabelRecordDescription->setText(QLocale().toString(idx1));
-	}
-}
-
-void Ui::AudioRecMainWin::on_ButtonPreviousRecord_clicked(){
-	quint64 idx1 = ui->ChartShowRec->stepDown();
-	quint64 idx2 = ui->ChartShowRecSpectrum->stepDown();
-	if (idx1 == idx2){
-		ui->LabelRecordDescription->setText(QLocale().toString(idx1));
-	}
 }
 
 void Ui::AudioRecMainWin::on_imageGenerated(QSharedPointer<QDir> inputDir, QSharedPointer<QImage> image){
@@ -364,33 +216,202 @@ void Ui::AudioRecMainWin::on_newFeatures(QSharedPointer<QDir> dir,
 	vf.writeToFile(newFile);
 }
 
-void Ui::AudioRecMainWin::on_ButtonGroupRecLength_buttonClicked(QAbstractButton* button){
-	// Convert the name of the clicked button to the record length value
-	Parameters::setParameter(Parameter::ParRecLength, QLocale().toInt(button->text()));
+// File Inspectors tab callbacks
+
+void Ui::AudioRecMainWin::on_ComboChooseFile_activated(QString text){
+	// Retrieve all possible audio files paths
+	QSharedPointer<QDir> dir(new QDir(text));
+	QSharedPointer<QDir> inputDir(new QDir(ui->LineEditInput->text()));
+	QSharedPointer<QStringList> audioFiles = listFilesInDir(inputDir, true /*return file paths*/, supportedAudioFormats);
+	// Search the current selected file among them
+	QSharedPointer<QStringList> selectedFile(new QStringList(audioFiles->filter(text)));
+	if (selectedFile->size() != 1) {popupError("Only one file should be returned"); return;}
+	// Create a dir from that file and pass it to the widgets
+	QSharedPointer<QDir> selectedDir(new QDir(selectedFile->first()));
+	emit readyToDisplay(selectedDir);
 }
 
-void Ui::AudioRecMainWin::on_SliderParTailSuppression_valueChanged(int value){
-	// Save the parameter change
-	double min = ui->SliderParTailSuppression->minimum();
-	double max = ui->SliderParTailSuppression->maximum();
-	Parameters::setParameter(Parameter::ParTailSuppression, (double(value)-min)/(max-min));
+void Ui::AudioRecMainWin::on_ButtonNextRecord_clicked(){
+	quint64 idx1 = ui->ChartShowRec->stepUp();
+	quint64 idx2 = ui->ChartShowRecSpectrum->stepUp();
+	if (idx1 == idx2){
+		ui->LabelRecordDescription->setText(QLocale().toString(idx1));
+	}
 }
 
-void Ui::AudioRecMainWin::on_ButtonGroupBinWidth_buttonClicked(QAbstractButton* button){
-	// Convert the name of the clicked button to the record length value
-	Parameters::setParameter(Parameter::ParBinWidth, QLocale().toInt(button->text()));
+void Ui::AudioRecMainWin::on_ButtonPreviousRecord_clicked(){
+	quint64 idx1 = ui->ChartShowRec->stepDown();
+	quint64 idx2 = ui->ChartShowRecSpectrum->stepDown();
+	if (idx1 == idx2){
+		ui->LabelRecordDescription->setText(QLocale().toString(idx1));
+	}
 }
 
-void Ui::AudioRecMainWin::on_SliderParPeaksRelevance_valueChanged(int value){
-	// Save the parameter change
-	double min = ui->SliderParPeaksRelevance->minimum();
-	double max = ui->SliderParPeaksRelevance->maximum();
-	Parameters::setParameter(Parameter::ParPeaksRelevance, (double(value)-min)/(max-min));
+// Parameters tab callbacks
+
+void Ui::AudioRecMainWin::on_ButtonGroupMaxFreq_buttonClicked(QAbstractButton* button){
+	// Get the maximum frequency value (input is expressed in kHz)
+	double maxFreq = QLocale().toDouble(button->text()) * 1024;
+	Parameters::setParameter(Parameter::ParMaxFreq, maxFreq);
 }
 
-void Ui::AudioRecMainWin::on_SliderPeakHeightThreshold_valueChanged(int value){
-	// Save the parameter change
-	double min = ui->SliderPeakHeightThreshold->minimum();
-	double max = ui->SliderPeakHeightThreshold->maximum();
-	Parameters::setParameter(Parameter::ParPeakHeightThreshold, (double(value)-min)/(max-min));
+void Ui::AudioRecMainWin::on_ButtonGroupMinFreq_buttonClicked(QAbstractButton* button){
+	// Get the minimum frequency value
+	double minFreq = QLocale().toDouble(button->text()) * 64;
+	Parameters::setParameter(Parameter::ParMinFreq, minFreq);
 }
+
+void Ui::AudioRecMainWin::on_ButtonGroupOversampling_buttonClicked(QAbstractButton* button){
+	// Get the oversampling value and set the parameter
+	int oversampling = QLocale().toInt(button->text().remove('x'));
+	Parameters::setParameter(Parameter::ParOversampling, oversampling);
+}
+
+// DB Creation tab callbacks
+
+void Ui::AudioRecMainWin::on_ButtonIntraBrowseDB_clicked(){
+	// Create and execute a file browser process
+	QString folderName = QFileDialog::getExistingDirectory(this, "Select a folder with features");
+	// Check if the user pressed cancel
+	if (folderName.isEmpty()) return;
+	// Share path with the line edit
+	ui->LineEditIntraDB->setText(folderName);
+}
+
+void Ui::AudioRecMainWin::on_ButtonExtraBrowseDB_clicked(){
+	// Create and execute a file browser process
+	QString folderName = QFileDialog::getExistingDirectory(this, "Select a folder with features");
+	// Check if the user pressed cancel
+	if (folderName.isEmpty()) return;
+	// Share path with the line edit
+	ui->LineEditExtraDB->setText(folderName);
+}
+
+void Ui::AudioRecMainWin::on_ButtonResetView_clicked(){
+	ui->BarSetDB->chart()->zoomReset();
+}
+
+void Ui::AudioRecMainWin::on_ButtonCreateDatabase_clicked(){
+	// Check if it input is empty
+	if (ui->LineEditIntraDB->text().isEmpty() or ui->LineEditExtraDB->text().isEmpty()) return;
+	// Get the list of files in the input directory
+	QSharedPointer<QDir> dirIntra(new QDir(ui->LineEditIntraDB->text()));
+	QSharedPointer<QDir> dirExtra(new QDir(ui->LineEditExtraDB->text()));
+	QSharedPointer<QStringList> fileNamesIntra = listFilesInDir(dirIntra, true, {"*.feat"});
+	QSharedPointer<QStringList> fileNamesExtra = listFilesInDir(dirExtra, true, {"*.feat"});
+	// Create the database from features file names (separate thread)
+	DBInterpreter* db = new DBInterpreter;
+	db->setIntraFeats(fileNamesIntra);
+	db->setExtraFeats(fileNamesExtra);
+	QThread* dbThread = new QThread(this);
+	db->moveToThread(dbThread);
+	connect(dbThread, SIGNAL(started()),
+			db, SLOT(computeDB()));
+	connect(dbThread, SIGNAL(finished()),
+			db, SLOT(deleteLater()));
+	connect(db, SIGNAL(histogramReady(QVector<double>, QVector<double>)),
+			ui->BarSetDB, SLOT(plotHistogram(QVector<double>, QVector<double>)));
+	connect(db, SIGNAL(fittingReady(QVector<double>, QVector<double>)),
+			ui->BarSetDB, SLOT(plotGaussianCurve(QVector<double>, QVector<double>)));
+	connect(db, SIGNAL(databaseCreated()),
+			this, SLOT(on_DBCreated()));
+	ui->BarSetDB->setFitOverlay(false);
+	dbThread->start();
+}
+
+void Ui::AudioRecMainWin::on_DBCreated(){
+	// Create and execute a file browser process
+	QString fileName = QFileDialog::getSaveFileName(this,
+													"Select the database file name");
+	// If the user press cancel, don't save anything
+	if (fileName.isEmpty()) return;
+	// Insert the proper extension
+	QString ext = "adb";
+	if(fileName.split(".").last() != ext) fileName.append(QString(".")+ext);
+	// Save the database to that file
+	DBInterpreter* db = dynamic_cast<DBInterpreter*>(QObject::sender());
+	QFile file(fileName);
+	db->writeDBToFile(file);
+}
+
+void Ui::AudioRecMainWin::on_ButtonCleanPlot_clicked(){
+	ui->BarSetDB->chart()->removeAllSeries();
+}
+
+// Matching tab callbacks
+
+void Ui::AudioRecMainWin::on_ButtonResetMatching_clicked(){
+	ui->BarPlotSuspects->chart()->zoomReset();
+}
+
+void Ui::AudioRecMainWin::on_ButtonStartMatching_clicked(){
+	ui->BarPlotSuspects->chart()->removeAllSeries();
+	ui->TableMatchingResults->setText("FileName   TA   FR");
+	// Roughly check input and output
+	if (ui->LineEditDB->text().isEmpty()) {ui->LineEditDB->setPlaceholderText("An input file must be provided!");return;}
+	if (ui->LineEditCulprit->text().isEmpty()) {ui->LineEditCulprit->setPlaceholderText("An input file must be provided!");return;}
+	if (ui->LineEditSuspects->text().isEmpty()) {ui->LineEditSuspects->setPlaceholderText("An input file must be provided!");return;}
+	// Read the database
+	DBInterpreter db;
+	QFile dbFile(ui->LineEditDB->text());
+	db.readDBFromFile(dbFile);
+	// Show the curves in the chart
+	QVector<double> x;
+	for(double d = 0.0; d < 5; d += 0.1) x << d;
+	ui->BarPlotSuspects->plotGaussianCurve(db.getIntraCoeffs(), x);
+	ui->BarPlotSuspects->plotGaussianCurve(db.getExtraCoeffs(), x);
+	// Start the matching on another thread
+	QThread* matchingThread = new QThread(this);
+	Matching* matching = new Matching;
+	matching->setExtraCoeffs(db.getExtraCoeffs());
+	matching->setIntraCoeffs(db.getIntraCoeffs());
+	matching->setCulpritFiles({ui->LineEditCulprit->text()});
+	QSharedPointer<QDir> suspectsDir(new QDir(ui->LineEditSuspects->text()));
+	matching->setSuspectsFiles(*listFilesInDir(suspectsDir, true, supportedAudioFormats));
+	matching->moveToThread(matchingThread);
+	connect(matchingThread, SIGNAL(started()),
+			matching, SLOT(match()));
+	connect(matchingThread, SIGNAL(finished()),
+			matching, SLOT(deleteLater()));
+	connect(matching, SIGNAL(newScore(QList<QVariant>)),
+			this, SLOT(on_newScore(QList<QVariant>)));
+	connect(matching, SIGNAL(newDistance(double)),
+			ui->BarPlotSuspects, SLOT(addSpot(double)));
+	matchingThread->start();
+}
+
+void Ui::AudioRecMainWin::on_newScore(QList<QVariant> score){
+	QString line = score.takeFirst().toString() + "   " + QLocale().toString(score.takeFirst().toDouble()) + "   " + QLocale().toString(score.takeFirst().toDouble());
+	QString all = ui->TableMatchingResults->text() + "<br>" + line;
+	ui->TableMatchingResults->setText(all);
+}
+
+void Ui::AudioRecMainWin::on_ButtonBrowseDB_clicked(){
+	// Create and execute a file browser process
+	QString fileName = QFileDialog::getOpenFileName(this, "Select DB file", QString(), "Audio Database file (*.adb)");
+	// Check if the user pressed cancel
+	if (fileName.isEmpty()) return;
+	// Share path with the line edit
+	ui->LineEditDB->setText(fileName);
+}
+
+void Ui::AudioRecMainWin::on_ButtonBrowseCulprit_clicked(){
+	// Create string with supported audio files
+	QString supportedAudio = "Audio file (" + supportedAudioFormats.join(" ") + ")";
+	// Create and execute a file browser process
+	QString fileName = QFileDialog::getOpenFileName(this, "Select culprit audio file", QString(), supportedAudio);
+	// Check if the user pressed cancel
+	if (fileName.isEmpty()) return;
+	// Share path with the line edit
+	ui->LineEditCulprit->setText(fileName);
+}
+
+void Ui::AudioRecMainWin::on_ButtonBrowseSuspects_clicked(){
+	// Create and execute a file browser process
+	QString folderName = QFileDialog::getExistingDirectory(this, "Select suspects folder");
+	// Check if the user pressed cancel
+	if (folderName.isEmpty()) return;
+	// Share path with the line edit
+	ui->LineEditSuspects->setText(folderName);
+}
+

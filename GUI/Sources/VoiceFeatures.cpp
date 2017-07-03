@@ -31,7 +31,7 @@ bool Ui::VoiceFeatures::writeToFile(QFile& file){
 }
 
 arma::mat Ui::VoiceFeatures::toArmaMat() const{
-	if (features.isNull()) return arma::mat();
+	if (features.isNull() || features->isEmpty()) return arma::mat();
 	// Create the matrix (suppose that each inner vector has the same size)
 	arma::mat mat(features->first().size(), features->size());
 	// Fill each column of the matrix with the inner vectors
@@ -41,51 +41,27 @@ arma::mat Ui::VoiceFeatures::toArmaMat() const{
 }
 
 double Ui::VoiceFeatures::distance(const VoiceFeatures& features){
+	const double maxCond = 0.1;
 	if (this->features.isNull() || features.features.isNull()) return -1.0;
-	// Define weighted mean functor
-	auto weightedMean = [](arma::vec x, arma::vec w){ return arma::sum(x % w)/double(x.size()); };
 	// Get the matrices
 	arma::mat A = this->toArmaMat();
-//	qDebug() << "A"; A.print();
 	arma::mat B = features.toArmaMat();
-//	qDebug() << "B"; B.print();
-	// Separates the weights
-	arma::vec wA = arma::normalise(A.col(2), 1);
-	arma::vec wB = arma::normalise(B.col(2), 1);
-	wA = arma::ones<arma::vec>(wA.size());
-	wB = arma::ones<arma::vec>(wB.size());
-	// Comptue the weighted mean of the columns of A and B
-	arma::rowvec wmeanA, wmeanB;
-	wmeanA << weightedMean(A.col(0), wA) << weightedMean(A.col(1), wA);
-	wmeanB << weightedMean(B.col(0), wB) << weightedMean(B.col(1), wB);
-//	qDebug() << "wmeanA"; wmeanA.print();
-//	qDebug() << "wmeanB"; wmeanB.print();
-	// Compute the weighted covariance matrix
-//	arma::mat22 CA = {
-//		weightedMean(arma::square(A.col(0)-wmeanA(0)), wA),
-//		weightedMean((A.col(0)-wmeanA(0))%(A.col(1)-wmeanA(1)), wA),
-//		weightedMean((A.col(0)-wmeanA(0))%(A.col(1)-wmeanA(1)), wA),
-//		weightedMean(arma::square(A.col(1)-wmeanA(1)), wA)
-//	};
-	arma::mat CA = arma::cov(A.cols(0,1));
-//	qDebug() << "CA"; CA.print();
-//	arma::mat22 CB = {
-//		weightedMean(arma::square(B.col(0)-wmeanB(0)), wB),
-//		weightedMean((B.col(0)-wmeanB(0))%(B.col(1)-wmeanB(1)), wB),
-//		weightedMean((B.col(0)-wmeanB(0))%(B.col(1)-wmeanB(1)), wB),
-//		weightedMean(arma::square(B.col(1)-wmeanB(1)), wB)
-//	};
-	arma::mat CB = arma::cov(B.cols(0,1));
-//	qDebug() << "CB"; CB.print();
+	A.col(2).ones(); // comment these lines to get weighted covariance matrices
+	B.col(2).ones();
+	// Compute the weighted cross-covariance matrices
+	arma::mat CA = arma::zeros<arma::mat>(A.n_cols-1, A.n_cols-1);
+	if(A.n_rows == 1) CA.eye();
+	else CA = weightCov(A.cols(0, 1), A.col(2));
+	arma::mat CB = arma::zeros<arma::mat>(B.n_cols-1, B.n_cols-1);
+	if(B.n_rows == 1) CB.eye();
+	else CB = weightCov(B.cols(0, 1), B.col(2));
+	// Average the two cross-covariance matrices
 	arma::mat C = (double(A.n_rows) * CA + double(B.n_rows) * CB) / double(A.n_rows+B.n_rows);
-//	qDebug() << "C"; C.print();
-	// Compute the mean value of the columns in the second matrix
-	arma::rowvec m = wmeanA - wmeanB;
-//	qDebug() << "m"; m.print();
+	if(arma::rcond(C) < maxCond) C.eye();
+	// Compute the weighted mean value of the columns in the second matrix
+	arma::rowvec m = weightMean(A.cols(0, 1), A.col(2)) - weightMean(B.cols(0, 1), B.col(2));
 	// Compute the Mahalanobis distance
-	double result = sqrt( arma::as_scalar(m * arma::inv(C) * m.t()) );
-//	qDebug() << "result: " << result;
-	return result;
+	return sqrt( arma::as_scalar(m * arma::inv(C) * m.t()) );
 }
 
 void Ui::VoiceFeatures::setFeatures(QSharedPointer<QVector<QVector<double>>> features){

@@ -14,21 +14,22 @@ QSharedPointer<QVector<double>> Ui::AudioProcess::armaToQ(const arma::vec& vec) 
 }
 
 void Ui::AudioProcess::run() {
-	// Load parameters from Application class
-	int recLength = Parameters::getParameter(Parameter::ParRecLength).toInt();
-	int gaussFilterRad = Parameters::getParameter(Parameter::ParGaussFilterRad).toInt();
+	// Load parameters from Parameters class
+	double maxFreq = Parameters::getParameter(Parameter::ParMaxFreq).toDouble();
+	double minFreq = Parameters::getParameter(Parameter::ParMinFreq).toDouble();
+	int oversampling = Parameters::getParameter(Parameter::ParOversampling).toInt();
 	int backEstMinFilterRad = Parameters::getParameter(Parameter::ParBackEstMinFilterRad).toInt();
 	double backEstMaxPeakWidthAllowed = Parameters::getParameter(Parameter::ParBackEstMaxPeakWidthAllowed).toDouble();
 	int backEstDerEstimationDiam = Parameters::getParameter(Parameter::ParBackEstDerEstimationDiam).toInt();
 	int backEstMaxIterations = Parameters::getParameter(Parameter::ParBackEstMaxIterations).toInt();
 	double backEstMaxAllowedInconsistency = Parameters::getParameter(Parameter::ParBackEstMaxAllowedInconsistency).toDouble();
 	int backEstMaxDistNodes = Parameters::getParameter(Parameter::ParBackEstMaxDistNodes).toInt();
-	double intervalStartFreq = Parameters::getParameter(Parameter::ParIntervalStartFreq).toDouble();
 	double buttFiltTail = Parameters::getParameter(Parameter::ParTailSuppression).toDouble();
 	double peakRelevance = Parameters::getParameter(Parameter::ParPeaksRelevance).toDouble();
 	double peakMinVarInfluence = Parameters::getParameter(Parameter::ParPeakMinVariationInfluence).toDouble();
 	int binWidth = Parameters::getParameter(Parameter::ParBinWidth).toInt();
 	double peakHeightThreshold = Parameters::getParameter(Parameter::ParPeakHeightThreshold).toDouble();
+	
 	// If samples is already allocated use it, otherwise load from file
 	if (reader.isNull() || reader->getSamplesPtr()->isEmpty()) {
 		// Read the audio file associated with this class instance
@@ -47,6 +48,9 @@ void Ui::AudioProcess::run() {
 	QSharedPointer<QVector<double>> samples = reader->getSamplesPtr();
 	// Get the vector of samples
 	arma::vec allsamples(samples->toStdVector()); // is the data copied?
+	// Compute the record length (the first multiple of 1024 greater than the needed value)
+	// Divide by oversampling: during the processing the signal is oversampled
+	int recLength = ceil(0.5 * (1.0 + sqrt(1.0 + 4.0 * reader->getSampleRate() * maxFreq)) * 2.0 / 1024.0) * 1024 / oversampling;
 	// Get the number of records
 	unsigned int numRecords = ceil(double(reader->getSampleCount()) / double(recLength));
 	// Define a matrix to store the formants information
@@ -62,6 +66,8 @@ void Ui::AudioProcess::run() {
 			arma::vec samples = allsamples.rows(recIdx*recLength, std::min<unsigned int>((recIdx+1)*recLength-1, allsamples.size()-1));
 			// The last record may be unreliable and we can exploit too few frequencies, so skip it
 			if (samples.size() < recLength) continue;
+			// Take into account the oversampling parameter
+			samples = oversample(samples, oversampling);
 			// Windowing (butterworth window)
 			{
 				double buttFiltOrder = 5.0;
@@ -80,8 +86,6 @@ void Ui::AudioProcess::run() {
 			// Compute the signal spectrum (the Fourier Mathematica command divide by sqrt(N))
 			arma::vec wholeSpectrum = arma::square(arma::abs(arma::fft(binnedSamples)))/double(binnedSamples.size());
 			arma::vec spectrum = wholeSpectrum.subvec(0, wholeSpectrum.size()/2+1); // take relevant part
-			// Apply a gaussian smoothing to the spectrum
-//			arma::vec averagedSpectrum = gaussianFilter(spectrum, gaussFilterRad, border_type::replicate);
 			// Estimate the background and subtract it from the spectrum
 			arma::vec estBackSpectrum = backgroundEstimation(spectrum,
 															 backEstMinFilterRad, backEstMaxPeakWidthAllowed,
@@ -90,9 +94,9 @@ void Ui::AudioProcess::run() {
 			// Final gaussian smoothing
 			arma::vec foreSpectrum = spectrum-estBackSpectrum;
 			// Split the spectrum in three intervals and get the formants
-			double intervalStartBin = round(freq2bin(reader->getSampleRate(), recLength, intervalStartFreq) / double(binWidth));
+			double intervalStartBin = round(freq2bin(reader->getSampleRate(), recLength, minFreq) / double(binWidth));
 			double intervalWidthBin = floor((foreSpectrum.size()-intervalStartBin)/3);
-			arma::vec4 edges = intervalStartBin + arma::regspace(0, 3) * intervalWidthBin;
+			arma::vec4 edges = intervalStartBin + arma::regspace(0, 3) * (intervalWidthBin-1);
 			foreSpectrum = foreSpectrum.subvec(edges(0), edges(3));
 			emit notableSpectrum(armaToQ(arma::abs(foreSpectrum)));
 			// Peaks detection
@@ -169,7 +173,7 @@ void Ui::AudioProcess::run() {
 		emit imageGenerated(dir, corr);
 		
 		// Signals the features array
-		QSharedPointer<QVector<QVector<double>>> features(new QVector<QVector<double>>(corrSet.n_cols));
+		features->resize(corrSet.n_cols);
 		for (unsigned int j = 0; j < corrSet.n_cols; j++){
 			QVector<double> vec(corrSet.n_rows);
 			for (unsigned int i = 0; i < corrSet.n_rows; i++) vec[i] = corrSet(i, j);
