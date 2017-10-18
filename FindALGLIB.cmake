@@ -29,7 +29,9 @@ find_path (ALGLIB_INCLUDES
     PATHS
     /usr/local/Cellar/alglib/3.10.0/include/alglib
     )
-find_library (ALGLIB_LIBRARIES NAMES alglib)
+find_library (ALGLIB_LIBRARIES 
+    NAMES alglib 
+    PATHS /usr/local/Cellar/alglib/3.10.0/lib/libalglib.dylib)
 
 # handle the QUIETLY and REQUIRED arguments and set ALGLIB_FOUND to TRUE if
 # all listed variables are TRUE
