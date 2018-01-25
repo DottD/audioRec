@@ -6,12 +6,12 @@
 #include <QString>
 #include <QMimeData>
 
-namespace Ui {
+namespace GUI {
 	class LineEditDropReceiver;
 }
 
 /** QLineEdit subclass that handles file drag and drop. */
-class Ui::LineEditDropReceiver : public QLineEdit {
+class GUI::LineEditDropReceiver : public QLineEdit {
 	Q_OBJECT
 	
 	/** Drop event callback.

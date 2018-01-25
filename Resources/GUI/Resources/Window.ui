@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>mainWin</class>
- <widget class="QWidget" name="mainWin">
+ <class>WindowUI</class>
+ <widget class="QWidget" name="WindowUI">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -29,7 +29,7 @@
       <enum>QTabWidget::Triangular</enum>
      </property>
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="TabFileInspection">
       <attribute name="title">
@@ -40,7 +40,7 @@
         <widget class="QComboBox" name="ComboChooseFile"/>
        </item>
        <item>
-        <widget class="Ui::ChartRecWidget" name="ChartShowRec" native="true">
+        <widget class="GUI::ChartRecWidget" name="ChartShowRec" native="true">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -137,7 +137,7 @@
         </layout>
        </item>
        <item>
-        <widget class="Ui::ChartRecSpecWidget" name="ChartShowRecSpectrum" native="true">
+        <widget class="GUI::ChartRecSpecWidget" name="ChartShowRecSpectrum" native="true">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -635,171 +635,30 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>2</number>
+      <number>0</number>
      </property>
-     <widget class="QWidget" name="TabIO">
-      <attribute name="title">
-       <string>Features Creation</string>
-      </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_2">
-       <item>
-        <layout class="QHBoxLayout" name="HorInput">
-         <property name="sizeConstraint">
-          <enum>QLayout::SetFixedSize</enum>
-         </property>
-         <item>
-          <widget class="QLabel" name="LabelInput">
-           <property name="text">
-            <string>Input Path or File</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="Ui::LineEditDropReceiver" name="LineEditInput"/>
-         </item>
-         <item>
-          <widget class="QPushButton" name="ButtonInputBrowse">
-           <property name="text">
-            <string>Browse...</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="HorOutput">
-         <property name="sizeConstraint">
-          <enum>QLayout::SetFixedSize</enum>
-         </property>
-         <item>
-          <widget class="QLabel" name="LabelOutput">
-           <property name="text">
-            <string>Output Path</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="Ui::LineEditDropReceiver" name="LineEditOutput"/>
-         </item>
-         <item>
-          <widget class="QPushButton" name="ButtonOutputBrowse">
-           <property name="text">
-            <string>Browse...</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="HorComputationControl">
-         <item>
-          <widget class="QPushButton" name="ButtonCompute">
-           <property name="maximumSize">
-            <size>
-             <width>100</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="text">
-            <string>Compute</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="LabelCompletion">
-           <property name="text">
-            <string>Completion</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-           </property>
-           <property name="indent">
-            <number>10</number>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <widget class="Ui::ImageSlide" name="LabelMatrixView">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="frameShape">
-          <enum>QFrame::NoFrame</enum>
-         </property>
-         <property name="text">
-          <string/>
-         </property>
-         <property name="scaledContents">
-          <bool>true</bool>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout">
-         <item>
-          <widget class="QPushButton" name="ButtonPrevImage">
-           <property name="text">
-            <string/>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="LabelImageName">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>Image Name</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignCenter</set>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="ButtonNextImage">
-           <property name="text">
-            <string/>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-      </layout>
-     </widget>
      <widget class="QWidget" name="TabDB">
       <attribute name="title">
        <string>DB Creation</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>
-        <layout class="QHBoxLayout" name="HorIntraDB">
+        <layout class="QHBoxLayout" name="DBFilesHorLayout">
          <property name="sizeConstraint">
           <enum>QLayout::SetFixedSize</enum>
          </property>
          <item>
-          <widget class="QLabel" name="LabelIntraDB">
+          <widget class="QLabel" name="DBFilesLabel">
            <property name="text">
-            <string>Intra-voice features</string>
+            <string>Audio Files</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="Ui::LineEditDropReceiver" name="LineEditIntraDB"/>
+          <widget class="GUI::LineEditDropReceiver" name="DBFilesLineEdit"/>
          </item>
          <item>
-          <widget class="QPushButton" name="ButtonIntraBrowseDB">
+          <widget class="QPushButton" name="DBFilesBrowseButton">
            <property name="text">
             <string>Browse...</string>
            </property>
@@ -808,38 +667,21 @@
         </layout>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="HorExtraDB">
-         <property name="sizeConstraint">
-          <enum>QLayout::SetFixedSize</enum>
+        <widget class="QProgressBar" name="DBProgressBar">
+         <property name="value">
+          <number>24</number>
          </property>
-         <item>
-          <widget class="QLabel" name="LabelExtraDB">
-           <property name="text">
-            <string>Extra-voice features</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="Ui::LineEditDropReceiver" name="LineEditExtraDB"/>
-         </item>
-         <item>
-          <widget class="QPushButton" name="ButtonExtraBrowseDB">
-           <property name="text">
-            <string>Browse...</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
+        </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="ButtonCreateDatabase">
+        <widget class="QPushButton" name="DBCreateButton">
          <property name="text">
           <string>Create Database</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="Ui::DatabaseChart" name="BarSetDB" native="true">
+        <widget class="GUI::DatabaseChart" name="DBChartView" native="true">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -849,16 +691,16 @@
         </widget>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <layout class="QHBoxLayout" name="PlotCtrlHorLayout">
          <item>
-          <widget class="QPushButton" name="ButtonCleanPlot">
+          <widget class="QPushButton" name="PlotCtrlCleanButton">
            <property name="text">
             <string>Clean Plot</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="ButtonResetView">
+          <widget class="QPushButton" name="PlotCtrlResetViewButton">
            <property name="text">
             <string>Reset View</string>
            </property>
@@ -873,117 +715,10 @@
        <string>Matching</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_3">
-       <item row="2" column="0">
-        <layout class="QHBoxLayout" name="HorSuspectsFolder">
-         <property name="sizeConstraint">
-          <enum>QLayout::SetFixedSize</enum>
-         </property>
-         <item>
-          <widget class="QLabel" name="LabelSuspects">
-           <property name="text">
-            <string>Suspects Folder</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="Ui::LineEditDropReceiver" name="LineEditSuspects"/>
-         </item>
-         <item>
-          <widget class="QPushButton" name="ButtonBrowseSuspects">
-           <property name="text">
-            <string>Browse...</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item row="4" column="0">
-        <widget class="Ui::DatabaseChart" name="BarPlotSuspects" native="true">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="0">
-        <layout class="QHBoxLayout" name="HorMatching">
-         <item>
-          <widget class="QPushButton" name="ButtonTestIntra">
-           <property name="text">
-            <string>Test Intra</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="ButtonTestExtra">
-           <property name="text">
-            <string>Test Extra</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="ButtonResetMatching">
-           <property name="text">
-            <string>Reset</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item row="0" column="0">
-        <layout class="QHBoxLayout" name="HorInputDB_2">
-         <property name="sizeConstraint">
-          <enum>QLayout::SetFixedSize</enum>
-         </property>
-         <item>
-          <widget class="QLabel" name="LabelDB">
-           <property name="text">
-            <string>Input DB</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="Ui::LineEditDropReceiver" name="LineEditDB"/>
-         </item>
-         <item>
-          <widget class="QPushButton" name="ButtonBrowseDB">
-           <property name="text">
-            <string>Browse...</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item row="1" column="0">
-        <layout class="QHBoxLayout" name="HorCulprit">
-         <property name="sizeConstraint">
-          <enum>QLayout::SetFixedSize</enum>
-         </property>
-         <item>
-          <widget class="QLabel" name="LabelCulprit">
-           <property name="text">
-            <string>Culprit Voice</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="Ui::LineEditDropReceiver" name="LineEditCulprit"/>
-         </item>
-         <item>
-          <widget class="QPushButton" name="ButtonBrowseCulprit">
-           <property name="text">
-            <string>Browse...</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
        <item row="3" column="0">
-        <widget class="QLabel" name="TableMatchingResults">
+        <widget class="QLabel" name="MatchingResultsLabel">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+          <sizepolicy hsizetype="Preferred" vsizetype="Ignored">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
@@ -999,6 +734,113 @@
          </property>
         </widget>
        </item>
+       <item row="5" column="0">
+        <layout class="QHBoxLayout" name="MatchingCtrlHorLayout">
+         <item>
+          <widget class="QPushButton" name="MCtrlMatchButton">
+           <property name="text">
+            <string>Match</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="MCtrlResetButton">
+           <property name="text">
+            <string>Reset</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="0" column="0">
+        <layout class="QHBoxLayout" name="MDBHorLayout">
+         <property name="sizeConstraint">
+          <enum>QLayout::SetFixedSize</enum>
+         </property>
+         <item>
+          <widget class="QLabel" name="MDBLabel">
+           <property name="text">
+            <string>Input DB</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="GUI::LineEditDropReceiver" name="MDBLineEdit"/>
+         </item>
+         <item>
+          <widget class="QPushButton" name="MDBBrowseButton">
+           <property name="text">
+            <string>Browse...</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="2" column="0">
+        <layout class="QHBoxLayout" name="MUnknownHorLayout">
+         <property name="sizeConstraint">
+          <enum>QLayout::SetFixedSize</enum>
+         </property>
+         <item>
+          <widget class="QLabel" name="MULabel">
+           <property name="text">
+            <string>Unknown Voice</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="GUI::LineEditDropReceiver" name="MULineEdit"/>
+         </item>
+         <item>
+          <widget class="QPushButton" name="MUBrowseButton">
+           <property name="text">
+            <string>Browse...</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="1" column="0">
+        <layout class="QHBoxLayout" name="MKnownHorLayout">
+         <property name="sizeConstraint">
+          <enum>QLayout::SetFixedSize</enum>
+         </property>
+         <item>
+          <widget class="QLabel" name="MKLabel">
+           <property name="text">
+            <string>Known Voice</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="GUI::LineEditDropReceiver" name="MKLineEdit"/>
+         </item>
+         <item>
+          <widget class="QPushButton" name="MKBrowseButton">
+           <property name="text">
+            <string>Browse...</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="4" column="0">
+        <widget class="GUI::DatabaseChart" name="MatchingChartView" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0">
+        <widget class="QProgressBar" name="MatchingProgressBar">
+         <property name="value">
+          <number>24</number>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
     </widget>
@@ -1008,29 +850,24 @@
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
   <customwidget>
-   <class>Ui::LineEditDropReceiver</class>
+   <class>GUI::LineEditDropReceiver</class>
    <extends>QLineEdit</extends>
    <header location="global">GUI/LineEditDropReceiver.hpp</header>
   </customwidget>
   <customwidget>
-   <class>Ui::ChartRecWidget</class>
+   <class>GUI::ChartRecWidget</class>
    <extends>QWidget</extends>
    <header location="global">GUI/ChartRecWidget.hpp</header>
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>Ui::ChartRecSpecWidget</class>
+   <class>GUI::ChartRecSpecWidget</class>
    <extends>QWidget</extends>
    <header location="global">GUI/ChartRecSpecWidget.hpp</header>
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>Ui::ImageSlide</class>
-   <extends>QLabel</extends>
-   <header location="global">GUI/ImageSlide.hpp</header>
-  </customwidget>
-  <customwidget>
-   <class>Ui::DatabaseChart</class>
+   <class>GUI::DatabaseChart</class>
    <extends>QWidget</extends>
    <header location="global">GUI/DatabaseChart.hpp</header>
    <container>1</container>
@@ -1039,8 +876,8 @@
  <resources/>
  <connections/>
  <buttongroups>
+  <buttongroup name="ButtonGroupOversampling"/>
   <buttongroup name="ButtonGroupMaxFreq"/>
   <buttongroup name="ButtonGroupMinFreq"/>
-  <buttongroup name="ButtonGroupOversampling"/>
  </buttongroups>
 </ui>

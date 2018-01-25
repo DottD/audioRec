@@ -1,6 +1,6 @@
 #include <GUI/DatabaseChart.hpp>
 
-Ui::DatabaseChart::DatabaseChart(QWidget* parent) :
+GUI::DatabaseChart::DatabaseChart(QWidget* parent) :
 QtCharts::QChartView(parent){
 	// Set chart appearance
 	chart()->setTitle("Distribution");
@@ -10,78 +10,82 @@ QtCharts::QChartView(parent){
 	chart()->legend()->setVisible(false);
 }
 
-QColor Ui::DatabaseChart::genNewColor(){
+QColor GUI::DatabaseChart::genNewColor(){
 	std::random_device rd;  //Will be used to obtain a seed for the random number engine
 	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
 	std::uniform_real_distribution<> dis(0.4, 0.9);
 	return QColor::fromRgbF(dis(gen), dis(gen), dis(gen), 0.7);
 }
 
-void Ui::DatabaseChart::plotHistogram(const arma::vec& x,
-									  const arma::vec& y,
-									  const QColor& color){
-	const double barsStep = Parameters::getParameter(Parameter::ParBarsStep).toDouble();
-	const double recWFactor = Parameters::getParameter(Parameter::ParRecWFactor).toDouble();
-	// Draw the rectangles composing the histogram
-	for (unsigned int k = 0; k < y.size(); k++){
+void GUI::DatabaseChart::plotHistogram(){
+	// Get the sender object
+	UMF::ComputeHistogram* histogram = dynamic_cast<UMF::ComputeHistogram*>(QObject::sender());
+	// Check if it is a finished ComputeHistogram algorithm
+	if(histogram == Q_NULLPTR || !histogram->hasFinished()) return;
+	// Get the output
+	const double BarStep = histogram->getBarStep();
+	const QVector<double>& X = histogram->getOutHistX();
+	const QVector<double>& Y = histogram->getOutHistY();
+	QColor color = genNewColor();
+	for(int l = 0; l < X.size(); ++l){
 		QLineSeries* topLine = new QLineSeries;
-		topLine->append(x(k)-barsStep/recWFactor, y(k));
-		topLine->append(x(k)+barsStep/recWFactor, y(k));
+		topLine->append(X[l]-BarStep/2.0, Y[l]);
+		topLine->append(X[l]+BarStep/2.0, Y[l]);
 		QAreaSeries* rectangle = new QAreaSeries(topLine);
-		rectangle->setColor(color);
+		rectangle->setColor( color );
 		rectangle->setBorderColor(QColor(0, 0, 0, 0));
 		chart()->addSeries(rectangle);
 	}
 	chart()->createDefaultAxes();
 }
 
-void Ui::DatabaseChart::plotGaussianCurve(const arma::vec& c,
-										  const arma::vec& x,
-										  const QColor& color){
-	// Evaluate the gaussian function over the given domain
-	arma::vec y = gaussExpFit::eval(c, x);
-	// Plot the line
-	QLineSeries* fittingCurve = new QLineSeries;
-	fittingCurve->setColor(color);
-	QPen linePen = fittingCurve->pen();
-	linePen.setWidth(3);
-	fittingCurve->setPen(linePen);
-	for(uint64_t k = 0; k < y.size(); k++) fittingCurve->append(x[k], y[k]);
-	chart()->addSeries(fittingCurve);
-	chart()->createDefaultAxes();
-}
-
-bool Ui::DatabaseChart::getFitOverlay(){
-	return this->fitOverlay;
-}
-
-void Ui::DatabaseChart::setFitOverlay(bool val){
-	this->fitOverlay = val;
-}
-
-void Ui::DatabaseChart::plotHistogram(QVector<double> x,
-									  QVector<double> y){
-	arma::vec xx, yy;
-	convert::qvec2arma(x, xx);
-	convert::qvec2arma(y, yy);
-	// Plot the histogram of the given data
-	const QColor color = genNewColor();
-	plotHistogram(xx, yy, color);
-	// Plot the fitting curve if requested
-	if(getFitOverlay()){
-		const arma::vec coeff = gaussExpFit::fit(xx, yy);
-		plotGaussianCurve(coeff, xx, color.lighter());
+void GUI::DatabaseChart::plotGaussianCurve(QVector<double> X,
+										   QVector<double> Y){
+	// Define a short form to plot a given curve
+	auto plotCurve = [this](QVector<double> X, QVector<double> Y){
+		QLineSeries* fittingCurve = new QLineSeries;
+		QPen linePen = fittingCurve->pen();
+		linePen.setWidth(3);
+		fittingCurve->setPen(linePen);
+		for(int l = 0; l < X.size(); l++) fittingCurve->append(X[l], Y[l]);
+		this->chart()->addSeries(fittingCurve);
+	};
+	// Use the given input, if any, otherwise look at the sender
+	if(!X.empty() && !Y.empty() && X.size() == Y.size()){
+		plotCurve(X, Y);
+	} else {
+		// Get the sender object
+		UMF::Fitting1D* fitting = dynamic_cast<UMF::Fitting1D*>(QObject::sender());
+		// Check if it is a finished Fitting1D algorithm
+		if(fitting != Q_NULLPTR && fitting->hasFinished()){
+			Q_ASSERT(!fitting->getInX().empty());
+			Q_ASSERT(!fitting->getOutCoefficients().empty());
+			// Get the output
+			const QVector<double>& x = fitting->getInX();
+			const QVector<double>& c = fitting->getOutCoefficients();
+			QVector<double> y = fitting->evaluate(c, x);
+			plotCurve(x, y);
+		} else {
+			// Try to convert to an Evaluate1D
+			UMF::Evaluate1D* evaluate = dynamic_cast<UMF::Evaluate1D*>(QObject::sender());
+			// Check if it is a finished Evaluate1D algorithm
+			if(evaluate != Q_NULLPTR && evaluate->hasFinished()){
+				Q_ASSERT(!evaluate->getInX().empty());
+				Q_ASSERT(!evaluate->getOutY().empty());
+				// Get the output
+				const QVector<double>& x = evaluate->getInX();
+				const QVector<double>& y = evaluate->getOutY();
+				plotCurve(x, y);
+			} else {
+				Q_EMIT raiseError("Sender must be a Fitting1D or an Evaluate1D");
+			}
+		}
 	}
+	// Update the view
+	this->chart()->createDefaultAxes();
 }
 
-void Ui::DatabaseChart::plotGaussianCurve(QVector<double> c,
-										  QVector<double> x){
-	plotGaussianCurve(arma::vec(c.data(), c.size(), false, false),
-					  arma::vec(x.data(), x.size(), false, false),
-					  genNewColor());
-}
-
-void Ui::DatabaseChart::addSpot(double x){
+void GUI::DatabaseChart::addSpot(double x){
 	QScatterSeries* point = new QScatterSeries;
 	point->append(x, 0);
 	chart()->addSeries(point);

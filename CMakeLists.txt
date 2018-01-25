@@ -13,6 +13,9 @@ set(CAVA_VERSION
 option(BUILD_SHARED_LIBS "Whether you want a static or shared build" ON)
 
 # Find the necessary packages
+set(ALGLIB_FIND_MODULE_PATH "." CACHE PATH "Path to the FindALGLIB.cmake module")
+set(SFML_FIND_MODULE_PATH "." CACHE PATH "Path to the FindSFML.cmake module")
+set(CMAKE_MODULE_PATH "${ALGLIB_FIND_MODULE_PATH};${SFML_FIND_MODULE_PATH}")
 find_package(Qt5 COMPONENTS Core Gui Widgets Charts Multimedia REQUIRED)
 find_package(Armadillo REQUIRED)
 find_package(SFML COMPONENTS audio system)
@@ -20,24 +23,24 @@ find_package(ALGLIB REQUIRED)
 find_package(QAlgorithm REQUIRED)
 
 # Include the right directories to the search path
-include_directories("${PROJECT_SOURCE_DIR}/Headers" ${PROJECT_BINARY_DIR} ${ARMADILLO_INCLUDE_DIRS} ${ALGLIB_INCLUDES})
+include_directories("${PROJECT_SOURCE_DIR}/Headers" ${PROJECT_BINARY_DIR} ${ARMADILLO_INCLUDE_DIRS} ${ALGLIB_INCLUDES} ${QAlgorithm_INCLUDE_DIRS})
 
 # Create the mathematical library
+set(CMAKE_AUTOMOC ON)
 file(GLOB_RECURSE UMF_HEADERS Headers/UMF/*.hpp)
 file(GLOB_RECURSE UMF_SOURCES Sources/UMF/*.cpp)
 add_library(UMF ${UMF_SOURCES} ${UMF_HEADERS}) # Useful Mathematical Functions
-target_link_libraries(UMF ${ARMADILLO_LIBRARIES} ${ALGLIB_LIBRARIES} Qt5::Core)
+target_link_libraries(UMF ${ARMADILLO_LIBRARIES} ${ALGLIB_LIBRARIES} ${QAlgorithm_LIBRARIES} Qt5::Core)
 set_property(TARGET UMF PROPERTY CXX_STANDARD 14)
 
 # Create the Audio Analysis library
 file(GLOB_RECURSE AA_HEADERS Headers/AA/*.hpp)
 file(GLOB_RECURSE AA_SOURCES Sources/AA/*.cpp)
-add_library(AA ${AA_SOURCES} ${AA_HEADERS}) # Useful Mathematical Functions
-target_link_libraries(AA ${ARMADILLO_LIBRARIES} ${ALGLIB_LIBRARIES} Qt5::Core Qt5::Gui UMF)
+add_library(AA ${AA_SOURCES} ${AA_HEADERS})
+target_link_libraries(AA ${ARMADILLO_LIBRARIES} ${ALGLIB_LIBRARIES} ${SFML_LIBRARIES} ${QAlgorithm_LIBRARIES} Qt5::Core Qt5::Gui UMF)
 set_property(TARGET AA PROPERTY CXX_STANDARD 14)
 
 # Create the executable with GUI
-set(CMAKE_AUTOMOC ON)
 file(GLOB_RECURSE UI_FILES Resources/GUI/*.ui)
 qt5_wrap_ui(UI_H ${UI_FILES})
 # CMAKE_AUTOMOC in ON so the MOC headers will be automatically wrapped.
@@ -50,4 +53,4 @@ add_executable(CAVA MACOSX_BUNDLE ${GUI_SOURCES} ${UI_H} ${GUI_HEADERS} ${GUI_RE
 elseif(UNIX AND NOT APPLE)
 add_executable(CAVA ${GUI_SOURCES} ${UI_H} ${GUI_HEADERS} ${GUI_RESOURCES})
 endif()
-target_link_libraries(CAVA ${ARMADILLO_LIBRARIES} ${SFML_LIBRARIES} Qt5::Core Qt5::Gui Qt5::Widgets Qt5::Charts Qt5::Multimedia UMF AA)
+target_link_libraries(CAVA ${ARMADILLO_LIBRARIES} ${SFML_LIBRARIES} ${QAlgorithm_LIBRARIES} Qt5::Core Qt5::Gui Qt5::Widgets Qt5::Charts Qt5::Multimedia UMF AA)

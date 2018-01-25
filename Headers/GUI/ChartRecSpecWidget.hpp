@@ -6,12 +6,12 @@
 #include <QVector>
 #include <GUI/ChartRecWidget.hpp>
 
-namespace Ui {
+namespace GUI {
 	class ChartRecSpecWidget;
 }
 
 /** Class to show audio signals' spectrums in frequency domain. */
-class Ui::ChartRecSpecWidget : public Ui::ChartRecWidget {
+class GUI::ChartRecSpecWidget : public GUI::ChartRecWidget {
 	
 	Q_OBJECT
 	
@@ -19,28 +19,23 @@ private:
 	bool logscale = true;
 	
 protected:
-	
 	/** Converts an array index to the real frequency.
-	 Overridden method from Ui::ChartRecWidget::indexConversion.*/
+	 Overridden method from GUI::ChartRecWidget::indexConversion.*/
 	double indexConversion(int k);
-	
-	/** Make connection and start the given AudioProcess.
-	 Overridden method from Ui::ChartRecWidget::start.*/
-	void start(AudioProcess* process);
 	
 	/** Update the axes to show the whole scene.
 	 A logarithmic scale is applied to the y-axis.
-	 Overridden method from Ui::ChartRecWidget::updateAxes.*/
+	 Overridden method from GUI::ChartRecWidget::updateAxes.*/
 	void updateAxes();
 	
 public:
-	ChartRecSpecWidget(QWidget* parent = Q_NULLPTR) : ChartRecWidget(parent) {};
+	ChartRecSpecWidget(QWidget* parent = Q_NULLPTR);
 	
 	/** Switch to a logarithmic scale. */
-	void setLogScale(){this->logscale = true;}
+	void setLogScale();
 	
 	/** Switch to a natural scale. */
-	void setNaturalScale(){this->logscale = false;}
+	void setNaturalScale();
 };
 
 #endif /* ChartRecSpecWidget_hpp */

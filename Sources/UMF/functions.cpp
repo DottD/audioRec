@@ -274,7 +274,7 @@ arma::vec backgroundEstimation(const arma::vec& array,
 		double maxDist = maxDistNodes * adjacentNodesDist;
 		uword m = pos[0], M = pos[0], n = 1;
 		double v = relDiff[0];
-		std::list<std::tuple<uword, uword, double>> ranges;
+		std::list<std::tuple<double, double, double>> ranges;
 		for (unsigned int k = 0; k < pos.size(); k++){ // cycle over pos array
 			if (posdiff[k] < 2*maxDist && k < pos.size()-1) { // position is part of the previous cluster (update range)
 				M = pos[k];
@@ -292,7 +292,7 @@ arma::vec backgroundEstimation(const arma::vec& array,
 		// Update each node in one of the ranges
 		for(unsigned int k = 0; k < n_nodes; k++){
 			if (ranges.empty()) break;
-			const std::tuple<uword, uword, double>& range = ranges.front();
+			const std::tuple<double, double, double>& range = ranges.front();
 			if (nodesX[k] < std::get<0>(range)) continue; // node before first range - do nothing
 			else if (nodesX[k] > std::get<1>(range)) { // node after first range
 				ranges.pop_front(); // remove the unuseful range (nodes are ordered)
@@ -303,11 +303,7 @@ arma::vec backgroundEstimation(const arma::vec& array,
 				double s = c-std::get<0>(range); // range radius
 				// Compute a gaussian weight according to the node position in the range
 				double weight = exp( - pow(nodesX[k]-c, 2) / (2.0 * pow(s, 2) / 3.0) );
-				//				std::cout << "range=(" << std::get<0>(range) << ", " << std::get<1>(range) << ", " << std::get<2>(range) << ") ";
-				//				std::cout << "c=" << c << " s=" << s << " w=" << weight << " ";
-				//				std::cout << "node=(" << nodesX[k] << ", " << nodesY[k] << ") ";
 				nodesY[k] *= (1 - std::get<2>(range) * weight);
-				//				std::cout << "--> node=(" << nodesX[k] << ", " << nodesY[k] << ") " << std::endl;
 			}
 		}
 		// Compute inconsistency

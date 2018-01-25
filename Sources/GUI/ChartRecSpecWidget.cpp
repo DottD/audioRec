@@ -1,19 +1,14 @@
 #include <GUI/ChartRecSpecWidget.hpp>
 
-void Ui::ChartRecSpecWidget::start(AudioProcess* process){
-	// Make connection between the thread and this class
-	connect(process, SIGNAL(raiseError(QString)),
-			this, SLOT(propagateError(QString)));
-	connect(process, SIGNAL(notableSpectrum(QSharedPointer<QVector<double>>)),
-			this, SLOT(addSeries(QSharedPointer<QVector<double>>)));
-	QThreadPool::globalInstance()->start(process);
+double GUI::ChartRecSpecWidget::indexConversion(int k) {
+	double SampleRate = reader->getOutSampleRate();
+	double MaxFreq = QSettings().value("FE/MaxFreq").toDouble();
+	double Oversampling = QSettings().value("FE/Oversampling").toDouble();
+	double RecLength = ceil(0.5 * (1.0 + sqrt(1.0 + 4.0 * SampleRate * MaxFreq)) * 2.0 / 1024.0) * 1024 / Oversampling;
+	return bin2freq(SampleRate, RecLength, double(k));
 }
 
-double Ui::ChartRecSpecWidget::indexConversion(int k) {
-	return bin2freq(double(getSampleRate()), double(Parameters::getParameter(Parameter::ParRecLength).toInt()), double(k));
-}
-
-void Ui::ChartRecSpecWidget::updateAxes(){
+void GUI::ChartRecSpecWidget::updateAxes(){
 	// Compute maximum and minimum value accross every line
 	qreal minX = __DBL_MAX__, maxX = __DBL_MIN__;
 	qreal minY = __DBL_MAX__, maxY = __DBL_MIN__;
@@ -50,3 +45,14 @@ void Ui::ChartRecSpecWidget::updateAxes(){
 		chart()->axisY()->setRange(minY, maxY);
 	}
 }
+
+GUI::ChartRecSpecWidget::ChartRecSpecWidget(QWidget* parent) : ChartRecWidget(parent) {};
+
+void GUI::ChartRecSpecWidget::setLogScale(){
+	this->logscale = true;
+}
+
+void GUI::ChartRecSpecWidget::setNaturalScale(){
+	this->logscale = false;
+}
+
