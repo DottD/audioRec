@@ -35,7 +35,6 @@ class AA::AudioReader : public QAlgorithm {
 	QA_CTOR_INHERIT
 	QA_IMPL_CREATE(AudioReader)
 	
-private:
 	static QMutex mutex;
 	
 public:

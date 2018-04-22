@@ -79,12 +79,7 @@ GUI::Window::~Window(){
 }
 
 void GUI::Window::popupError(QString errorDescription) {
-	QMessageBox errorDispatcher;
-	errorDispatcher.setWindowTitle("Error");
-	errorDispatcher.setStandardButtons(QMessageBox::StandardButton::Ok);
-	errorDispatcher.setDefaultButton(QMessageBox::StandardButton::Ok);
-	errorDispatcher.setText(errorDescription);
-	errorDispatcher.exec();
+	QMessageBox::critical(this, "Error", errorDescription);
 }
 
 void GUI::Window::on_CheckLogScale_stateChanged(int state){
@@ -112,10 +107,7 @@ void GUI::Window::on_ComboChooseFile_activated(QString text){
 	}
 	// Search the current selected file among them
 	QStringList selectedFile(audioFiles.filter(text));
-	if (selectedFile.size() != 1) {
-		popupError("Only one file should be returned");
-		return;
-	}
+	if (selectedFile.size() != 1) popupErrorWindow("Only one file should be returned");
 	// Pass the file name to the widgets
 	emit readyToDisplay(selectedFile.first());
 }
@@ -160,11 +152,12 @@ void GUI::Window::on_ButtonGroupOversampling_buttonClicked(QAbstractButton* butt
 
 void GUI::Window::on_DBFilesBrowseButton_clicked(){
 	// Create and execute a file browser process
-	QString folderName = QFileDialog::getExistingDirectory(this, "Select a folder");
+	QString folderName = QFileDialog::getExistingDirectory(this, "Select a folder", QDir::currentPath());
 	// Check if the user pressed cancel
-	if (folderName.isEmpty()) return;
-	// Share path with the line edit
-	ui->DBFilesLineEdit->setText(folderName);
+	if (!folderName.isEmpty()) {
+		// Share path with the line edit
+		ui->DBFilesLineEdit->setText(folderName);
+	}
 }
 
 void GUI::Window::on_PlotCtrlResetViewButton_clicked(){
@@ -172,13 +165,13 @@ void GUI::Window::on_PlotCtrlResetViewButton_clicked(){
 }
 
 void GUI::Window::on_DBCreateButton_clicked(){
-	// Check if it input is empty
-	if (ui->DBFilesLineEdit->text().isEmpty()) {
-		popupError("An input folder must be chosen");
-		return;
-	}
 	// Disable button
 	ui->DBCreateButton->setEnabled(false);
+	// Check if it input is empty
+	if (ui->DBFilesLineEdit->text().isEmpty()){
+		ui->DBCreateButton->setEnabled(true);
+		popupErrorWindow("An input folder must be chosen");
+	}
 	// Get the list of files in the input directory
 	auto dirScanner = ScanDirectory::create({
 		{"Extensions", supportedAudioFormats},
@@ -187,14 +180,12 @@ void GUI::Window::on_DBCreateButton_clicked(){
 	});
 	dirScanner->run();
 	QList<QList<QString>> dirContent = dirScanner->getOutContent();
-	qDebug() << "dirContent" << dirContent;
-	if(dirContent.isEmpty()){
-		popupError("Empty directory");
-		return;
+	if(dirContent.isEmpty()) {
+		ui->DBCreateButton->setEnabled(true);
+		popupErrorWindow("Empty directory");
 	}
 	// Set up features extraction parameters for later use
 	QAlgorithm::PropertyMap FEPars = {
-		{"File","Please fill in"},
 		{"KeepInput", false},
 		{"SelectRecord", -1},
 		{"MinFreq", QSettings().value("FE/MinFreq")},
@@ -214,15 +205,16 @@ void GUI::Window::on_DBCreateButton_clicked(){
 	};
 	// Declare a list of extractors (this intermediate step will avoid reloading files and recomputing the features)
 	// extractors will have the same structure of dirContent (1-1 correspondance)
-	QList<QList<QSharedPointer<GUI::AudioReadExtract>>> extractors;
+	QList<QList<QSharedPointer<AA::FeaturesExtractor>>> extractors;
 	for(const auto& dir: dirContent){// foreach subdir
 		// Create a new sublist
-		extractors << QList<QSharedPointer<GUI::AudioReadExtract>>();
+		extractors << QList<QSharedPointer<AA::FeaturesExtractor>>();
 		for(const auto& file: dir){ // foreach file
 			// Set current file as input to an audio reader instance
 			// Extract features after the reader has completed its task
-			FEPars["File"] = file;
-			auto extractor = GUI::AudioReadExtract::create(FEPars, this);
+			auto reader = AA::AudioReader::create({{"File", file}});
+			auto extractor = AA::FeaturesExtractor::create(FEPars);
+			reader >> extractor;
 			// Add to extractors to the last sublist created
 			extractors.last() << extractor;
 		}
@@ -233,31 +225,37 @@ void GUI::Window::on_DBCreateButton_clicked(){
 	{
 		// Compute the histogram of all the intra-speaker distances
 		auto histCompute = UMF::ComputeHistogram::create({
+			{"KeepInput", false},
 			{"OITable", QVariant::fromValue(QMapStringString({{"Distance","Values"}})) },
 			{"BarStep", QSettings().value("Histogram/BarStep")}
 		}, this);
+		// Define a map of already used pairs to avoid to compute the same distance twice
+		QSet<QSet<QAlgorithm*>> used_pairs;
 		for(auto& dir: extractors){
 			for(auto& outerExtractor: dir){
 				// Scan the files in the directory again and compute the distance
 				// between each couple of features array
 				for(auto& innerExtractor: dir){
-					// Check if it is the same file
-					if(innerExtractor.data() == outerExtractor.data()){
-						continue;
+					// Some checks:
+					auto sameFile = (outerExtractor == innerExtractor); // outer-inner are the same file
+					auto alreadyUsedPairs = used_pairs.contains({outerExtractor.data(), innerExtractor.data()});
+					if(!sameFile && !alreadyUsedPairs){
+						// Distance calculator
+						auto distanceCalculator = AA::FeaturesDistance::create({ {"KeepInput", false} }, this);
+						outerExtractor >> distanceCalculator;
+						innerExtractor >> distanceCalculator >> histCompute;
+						// Connect to progress bar
+						connect(distanceCalculator.data(), SIGNAL(justFinished()), this, SLOT(on_DBProgressBarStepUp()));
+						// Increment the files number
+						n_files++;
+						// Add this pair of extractors to used_pairs
+						used_pairs << QSet<QAlgorithm*>({outerExtractor.data(), innerExtractor.data()});
 					}
-					// Distance calculator
-					auto distanceCalculator = AA::FeaturesDistance::create({ {"KeepInput", true} }, this);
-					outerExtractor >> distanceCalculator;
-					innerExtractor >> distanceCalculator >> histCompute;
-					// Connect to progress bar
-					connect(distanceCalculator.data(), SIGNAL(justFinished()), this, SLOT(on_DBProgressBarStepUp()), Qt::QueuedConnection);
-					// Increment the files number
-					n_files++;
 				}
 			}
 		}
 		// When the histogram is computed draw the histogram
-		connect(histCompute.data(), SIGNAL(justFinished()), ui->DBChartView, SLOT(plotHistogram()), Qt::QueuedConnection);
+		connect(histCompute.data(), SIGNAL(justFinished()), ui->DBChartView, SLOT(plotHistogram()));
 		// Change output names and perform fitting
 		this->intraFitting = UMF::FittingGaussExp::create({
 			{"OITable", QVariant::fromValue(QMapStringString({{"HistX","X"},{"HistY","Y"}})) }
@@ -265,40 +263,49 @@ void GUI::Window::on_DBCreateButton_clicked(){
 		this->intraFitting->setObjectName("IntraFitting");
 		histCompute >> this->intraFitting;
 		// When the fitting algorithm finishes call on_DBCreated and plot the fitted curve
-		connect(this->intraFitting.data(), SIGNAL(justFinished()), this, SLOT(on_DBCreated()), Qt::QueuedConnection);
-		connect(this->intraFitting.data(), SIGNAL(justFinished()), ui->DBChartView, SLOT(plotGaussianCurve()), Qt::QueuedConnection);
+		connect(this->intraFitting.data(), SIGNAL(justFinished()), this, SLOT(on_DBCreated()));
+		connect(this->intraFitting.data(), SIGNAL(justFinished()), ui->DBChartView, SLOT(plotGaussianCurve()));
 	}
 	// Extra-speaker features
 	{
 		// Compute the histogram of all the extra-speaker distances
 		auto histCompute = UMF::ComputeHistogram::create({
+			{"KeepInput", false},
 			{"OITable", QVariant::fromValue(QMapStringString({{"Distance","Values"}})) },
 			{"BarStep", QSettings().value("Histogram/BarStep")}
 		}, this);
+		// Define a map of already used pairs to avoid to compute the same distance twice
+		QSet<QSet<QAlgorithm*>> used_pairs;
 		for(auto& outerDir: extractors){
 			for(auto& outerExtractor: outerDir){
 				// Scan the files in the directory again and compute the distance
 				// between each couple of features array
 				for(auto& innerDir: extractors){
+					// The intra-speaker distances are not to be considered here
+					// so skip if the dictories are the same
+					if(outerDir == innerDir) continue;
 					for(auto& innerExtractor: innerDir){
-						// Check if it is the same folder
-						if(outerExtractor.data() == innerExtractor.data()){
-							continue;
+						// Some checks:
+						auto sameFile = (outerExtractor == innerExtractor); // outer-inner are the same file
+						auto alreadyUsedPairs = used_pairs.contains({outerExtractor.data(), innerExtractor.data()});
+						if(!sameFile && !alreadyUsedPairs){
+							// Distance calculator
+							auto distanceCalculator = AA::FeaturesDistance::create({ {"KeepInput", false} }, this);
+							outerExtractor >> distanceCalculator;
+							innerExtractor >> distanceCalculator >> histCompute;
+							// Connect to progress bar
+							connect(distanceCalculator.data(), SIGNAL(justFinished()), this, SLOT(on_DBProgressBarStepUp()));
+							// Increment the files number
+							n_files++;
+							// Add this pair of extractors to used_pairs
+							used_pairs << QSet<QAlgorithm*>({outerExtractor.data(), innerExtractor.data()});
 						}
-						// Distance calculator
-						auto distanceCalculator = AA::FeaturesDistance::create({ {"KeepInput", true} }, this);
-						outerExtractor >> distanceCalculator;
-						innerExtractor >> distanceCalculator >> histCompute;
-						// Connect to progress bar
-						connect(distanceCalculator.data(), SIGNAL(justFinished()), this, SLOT(on_DBProgressBarStepUp()), Qt::QueuedConnection);
-						// Increment the files number
-						n_files++;
 					}
 				}
 			}
 		}
 		// When the histogram is computed draw the histogram
-		connect(histCompute.data(), SIGNAL(justFinished()), ui->DBChartView, SLOT(plotHistogram()), Qt::QueuedConnection);
+		connect(histCompute.data(), SIGNAL(justFinished()), ui->DBChartView, SLOT(plotHistogram()));
 		// Change output names and perform fitting
 		this->extraFitting = UMF::FittingGaussExp::create({
 			{"OITable", QVariant::fromValue(QMapStringString({{"HistX","X"},{"HistY","Y"}})) }
@@ -306,8 +313,8 @@ void GUI::Window::on_DBCreateButton_clicked(){
 		this->extraFitting->setObjectName("ExtraFitting");
 		histCompute >> this->extraFitting;
 		// When the fitting algorithm finishes call on_DBCreated and plot the fitted curve
-		connect(this->extraFitting.data(), SIGNAL(justFinished()), this, SLOT(on_DBCreated()), Qt::QueuedConnection);
-		connect(this->extraFitting.data(), SIGNAL(justFinished()), ui->DBChartView, SLOT(plotGaussianCurve()), Qt::QueuedConnection);
+		connect(this->extraFitting.data(), SIGNAL(justFinished()), this, SLOT(on_DBCreated()));
+		connect(this->extraFitting.data(), SIGNAL(justFinished()), ui->DBChartView, SLOT(plotGaussianCurve()));
 	}
 	// Finally set up the progress bar
 	ui->DBProgressBar->setRange(0, n_files);
@@ -328,7 +335,6 @@ void GUI::Window::on_DBCreated(){
 	// get the outputs and save the database
 	static QList<UMF::Fitting1D*> finishedAlgo;
 	UMF::Fitting1D* sender = dynamic_cast<UMF::Fitting1D*>(QObject::sender());
-	qDebug() << sender->objectName() << *sender;
 	finishedAlgo << sender;
 	if(finishedAlgo.size() == 2){
 		// Create and execute a file browser process
@@ -371,7 +377,7 @@ void GUI::Window::on_MCtrlMatchButton_clicked(){
 	if (ui->MDBLineEdit->text().isEmpty() ||
 		ui->MKLineEdit->text().isEmpty() ||
 		ui->MULineEdit->text().isEmpty()){
-		popupError("Check the input folders");
+		popupErrorWindow("Check the input folders");
 	}
 	// Reset the result label
 	ui->MatchingResultsLabel->setText("");
@@ -469,7 +475,7 @@ void GUI::Window::on_MCtrlMatchButton_clicked(){
 			CST1->setObjectName("Intra");
 			CST2->setObjectName("Extra");
 		} else {
-			popupError("Check input database");
+			popupErrorWindow("Check input database");
 		}
 		// Connections - plot curves from the database
 		connect(Evaluate1.data(), SIGNAL(justFinished()), ui->MatchingChartView, SLOT(plotGaussianCurve()));

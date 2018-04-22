@@ -2,7 +2,10 @@
 
 bool UMF::ComputeHistogram::perform(){
 	const QVector<double> values = getInValues();
-	Q_ASSERT(!values.empty());
+	if (values.isEmpty()){
+		qWarning("%s", "Cannot compute histogram: values empty!");
+		return false;
+	}
 	// Create an arma header over the input vector
 	const arma::vec data(values.data(), values.size());
 	// Preallocate the right memory in two QVectors, then create an arma header over them.

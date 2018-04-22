@@ -18,16 +18,18 @@
 // Other libraries
 #include <ui_Window.h>
 #include <QAlgorithm.hpp>
-#include <QCommuteName.hpp>
-#include <QAReleaseInput.hpp>
+#include <QAlgorithmEnvelope.hpp>
 #include <UMF/ComputeHistogram.hpp>
 #include <UMF/Fitting1D.hpp>
 #include <UMF/Evaluate1D.hpp>
 #include <UMF/ChiSquareTest.hpp>
 #include <AA/FeaturesDistance.hpp>
-#include <GUI/AudioReadExtract.hpp>
 #include <GUI/DatabaseChart.hpp>
 #include <GUI/ScanDirectory.hpp>
+
+#ifndef popupErrorWindow
+#define popupErrorWindow(text) {popupError(text);return;}
+#endif
 
 namespace GUI {
 	class Window;
