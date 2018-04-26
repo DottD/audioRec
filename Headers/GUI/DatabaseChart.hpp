@@ -41,8 +41,7 @@ public:
 	 @param[in] coefficients Coefficients of the gaussian function.
 	 @param[in] domain The set of points which the function must be evalutated on.
 	 */
-	Q_SLOT void plotGaussianCurve(QVector<double> X = {},
-								  QVector<double> C = {});
+	Q_SLOT void plotGaussianCurve();
 	
 	Q_SLOT void addSpot(double);
 	

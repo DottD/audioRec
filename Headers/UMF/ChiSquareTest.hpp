@@ -22,7 +22,7 @@ class UMF::ChiSquareTest : public QAlgorithm {
 	QA_IMPL_CREATE(ChiSquareTest)
 	
 public:
-	bool perform();
+	void run();
 };
 
 #endif /* ChiSquareTest_hpp */

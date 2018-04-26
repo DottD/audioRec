@@ -22,7 +22,7 @@ class GUI::ScanDirectory : public QAlgorithm {
 	QA_IMPL_CREATE(ScanDirectory)
 	
 public:
-	bool perform();
+	void run();
 };
 
 #endif /* ScanDirectory_hpp */

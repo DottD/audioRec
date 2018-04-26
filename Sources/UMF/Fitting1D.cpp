@@ -1,6 +1,6 @@
 #include <UMF/Fitting1D.hpp>
 
-bool UMF::Fitting1D::perform(){
+void UMF::Fitting1D::run(){
 	Q_ASSERT(getInX().size() == getInY().size());
 	const QVector<double>& X = getInX();
 	const QVector<double>& Y = getInY();
@@ -31,7 +31,6 @@ bool UMF::Fitting1D::perform(){
 	alglib::lsfitresults(state, info, c, report);
 	// C should have been modified during processing, as it shares memory with c
 	setOutCoefficients(C);
-	return true;
 }
 
 QVector<double> UMF::Fitting1D::evaluate(QVector<double> C,

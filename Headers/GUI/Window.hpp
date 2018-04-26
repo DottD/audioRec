@@ -1,8 +1,6 @@
 #ifndef CAVA_GUI_h
 #define CAVA_GUI_h
 
-#define QT_DEBUG_PLUGINS 1
-
 // Qt Library
 #include <QWidget>
 #include <QLineEdit>
@@ -50,13 +48,14 @@ private:
 	int processed, /**< Number of audio files processed */
 	fileCount; /**< Total number of audio files to be processed */
 	QSharedPointer<UMF::FittingGaussExp> extraFitting, intraFitting;
+	QList<QList<QString>> foundFiles;
 	
 	private Q_SLOTS:
 	
 	/** Display an error.
 	 Displays an error as a popup, with optional description, without quitting the graphical interface.
 	 */
-	Q_SLOT void popupError(QString errorDescription = "");
+	Q_SLOT void popupError(QString errorDescription);
 	
 	/** Handle log scale checkbox. */
 	Q_SLOT void on_CheckLogScale_stateChanged(int state);
@@ -93,6 +92,9 @@ private:
 	 */
 	Q_SLOT void on_DBFilesBrowseButton_clicked();
 	
+	/** Scan the database directory and store the result. */
+	Q_SLOT void on_DBFilesLineEdit_textChanged(const QString &text);
+	
 	/** Callback that resets the view to its original zoom and scroll. */
 	Q_SLOT void on_PlotCtrlResetViewButton_clicked();
 	
@@ -100,9 +102,6 @@ private:
 	 Computes the distances between every pair of feature vectors.
 	 */
 	Q_SLOT void on_DBCreateButton_clicked();
-	
-	/** Instructs the progress bar to increase its value. */
-	Q_SLOT void on_DBProgressBarStepUp();
 	
 	/** Save the database to file. */
 	Q_SLOT void on_DBCreated();

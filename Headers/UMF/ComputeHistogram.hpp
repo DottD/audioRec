@@ -21,7 +21,7 @@ class UMF::ComputeHistogram : public QAlgorithm {
 	QA_IMPL_CREATE(ComputeHistogram)
 	
 public:
-	bool perform();
+	void run();
 };
 
 #endif /* ComputeHistogram_hpp */

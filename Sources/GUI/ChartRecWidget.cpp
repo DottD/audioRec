@@ -14,45 +14,6 @@ QtCharts::QChartView(parent){
 	setRenderHint(QPainter::RenderHint::HighQualityAntialiasing);
 }
 
-void GUI::ChartRecWidget::display(QString fileName){
-	// Remove every series already displayed
-	chart()->removeAllSeries();
-	// Process file
-	QAlgorithm::PropertyMap FEPars = {
-		{"SelectRecord", recIdx},
-		{"MinFreq", QSettings().value("FE/MinFreq")},
-		{"MaxFreq", QSettings().value("FE/MaxFreq")},
-		{"Oversampling", QSettings().value("FE/Oversampling")},
-		{"BEMinFilterRad", QSettings().value("FE/BEMinFilterRad")},
-		{"BEMaxPeakWidth", QSettings().value("FE/BEMaxPeakWidth")},
-		{"BEDerivDiam", QSettings().value("FE/BEDerivDiam")},
-		{"BEMaxIterations", QSettings().value("FE/BEMaxIterations")},
-		{"BEMaxInconsistency", QSettings().value("FE/BEMaxInconsistency")},
-		{"BEMaxDistNodes", QSettings().value("FE/BEMaxDistNodes")},
-		{"ButtFilterTail", QSettings().value("FE/ButtFilterTail")},
-		{"PeakRelevance", QSettings().value("FE/PeakRelevance")},
-		{"PeakMinVarInfluence", QSettings().value("FE/PeakMinVarInfluence")},
-		{"BinWidth", QSettings().value("FE/BinWidth")},
-		{"PeakHeightThreshold", QSettings().value("FE/PeakHeightThreshold")}
-	};
-	reader = AA::AudioReader::create({{"File", fileName}});
-	auto extractor = AA::FeaturesExtractor::create(FEPars);
-	reader >> extractor;
-	// Plot specified series and handle errors
-	connect(extractor.data(), SIGNAL(raiseError(QString)), this, SLOT(propagateError(QString)));
-	connect(extractor.data(), SIGNAL(emitArray(QVector<double>)), this, SLOT(addSeries(QVector<double>)));
-	// Make the process start
-	QThreadPool::globalInstance()->start(extractor.data());
-}
-
-double GUI::ChartRecWidget::indexConversion(int k) {
-	double SampleRate = reader->getOutSampleRate();
-	double MaxFreq = QSettings().value("FE/MaxFreq").toDouble();
-	double Oversampling = QSettings().value("FE/Oversampling").toDouble();
-	int RecLength = ceil(0.5 * (1.0 + sqrt(1.0 + 4.0 * SampleRate * MaxFreq)) * 2.0 / 1024.0) * 1024 / Oversampling;
-	return double(RecLength * recIdx + k) / double(SampleRate);
-}
-
 void GUI::ChartRecWidget::addSeries(QVector<double> newData){
 	// Reset chart to the initial zoom and scroll
 	chart()->zoomReset();
@@ -64,12 +25,7 @@ void GUI::ChartRecWidget::addSeries(QVector<double> newData){
 	chart()->addSeries(line);
 	// Fill the series with data, compute min and max
 	for (int k = 0; k < newData.size(); k++)
-		*line << QPointF(indexConversion(k), newData.at(k));
-	// Update axes to visualize the full plot area
-	updateAxes();
-}
-
-void GUI::ChartRecWidget::updateAxes(){
+		*line << QPointF(indexToXAxis(k), valueToYAxis(newData.at(k)));
 	// Compute maximum and minimum value accross every line
 	qreal minX = __DBL_MAX__, maxX = __DBL_MIN__;
 	qreal minY = __DBL_MAX__, maxY = __DBL_MIN__;
@@ -88,7 +44,7 @@ void GUI::ChartRecWidget::updateAxes(){
 	chart()->createDefaultAxes();
 	
 	chart()->axisX()->setRange(minX, maxX);
-	chart()->axisX()->setTitleText("Time (s)");
+	chart()->axisX()->setTitleText(property("xAxisTitle").toString());
 	
 	chart()->axisY()->setRange(minY, maxY);
 }
@@ -118,22 +74,4 @@ void GUI::ChartRecWidget::keyPressEvent(QKeyEvent *event){
 		default:
 			break;
 	}
-}
-
-quint64 GUI::ChartRecWidget::stepUp() {
-	this->recIdx++;
-	display();
-	return this->recIdx;
-}
-quint64 GUI::ChartRecWidget::stepDown() {
-	if (this->recIdx > 0) this->recIdx--;
-	display();
-	return this->recIdx;
-}
-quint64 GUI::ChartRecWidget::getRecordIndex(){
-	return this->recIdx;
-}
-
-void GUI::ChartRecWidget::propagateError(QString errorMsg){
-	emit raiseError(errorMsg);
 }

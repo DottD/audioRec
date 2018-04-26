@@ -4,7 +4,7 @@
 #include <QScopedPointer>
 #include <QAlgorithm.hpp>
 #include <UMF/functions.hpp>
-#include <AA/AudioReader.hpp>
+#include <SFML/Audio/InputSoundFile.hpp>
 
 namespace AA {
 	class FeaturesExtractor;
@@ -19,12 +19,18 @@ class AA::FeaturesExtractor : public QAlgorithm {
 	
 	Q_OBJECT
 	
-	/** Samples read from audio file. */
-	QA_INPUT(QVector<double>, Samples)
-	QA_INPUT(quint32, SampleRate)
+	/** Sample rate of the audio input. */
+	QA_OUTPUT(double, SampleRate)
+	/** Total number of records in the file. */
+	QA_OUTPUT(int, TotalRecords)
+	/** Record length in samples */
+	QA_OUTPUT(int, RecordLength)
 	/** The features computed during the process. */
 	QA_OUTPUT(QVector<double>, Features)
 	
+	/** Directory pointing to the file to be read. */
+	QA_PARAMETER(QString, File, QString())
+	/** Record index to be evaluated. */
 	QA_PARAMETER(int, SelectRecord, int())
 	/** Minimum frequency allowed */
 	QA_PARAMETER(double, MinFreq, double())
@@ -55,10 +61,11 @@ class AA::FeaturesExtractor : public QAlgorithm {
 	QA_IMPL_CREATE(FeaturesExtractor)
 	
 public:
-	bool perform();
+	void run();
 	
 Q_SIGNALS:
-	void emitArray(QVector<double>);
+	Q_SIGNAL void timeSeries(QVector<double>);
+	Q_SIGNAL void frequencySeries(QVector<double>);
 };
 
 #endif /* FeaturesExtractor_hpp */

@@ -21,7 +21,7 @@ class AA::FeaturesToCorrMat : public QAlgorithm {
 	QA_IMPL_CREATE(FeaturesToCorrMat)
 	
 public:
-	bool perform();
+	void run();
 };
 
 #endif /* FeaturesToCorrMat_hpp */

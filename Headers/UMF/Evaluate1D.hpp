@@ -36,7 +36,7 @@ protected:
 	virtual void defineEvalFunc() = 0;
 	
 public:
-	bool perform() final;
+	void run() final;
 	
 	QVector<double> evaluate(QVector<double> C,
 							 QVector<double> X);

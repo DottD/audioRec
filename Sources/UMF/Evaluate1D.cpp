@@ -1,10 +1,9 @@
 #include <UMF/Evaluate1D.hpp>
 
-bool UMF::Evaluate1D::perform(){
+void UMF::Evaluate1D::run(){
 	Q_ASSERT(!getInX().empty());
 	// Perform fitting
 	setOutY( evaluate(getCoefficients(), getInX()) );
-	return true;
 }
 
 QVector<double> UMF::Evaluate1D::evaluate(QVector<double> C,

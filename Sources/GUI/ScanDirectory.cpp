@@ -1,6 +1,6 @@
 #include <GUI/ScanDirectory.hpp>
 
-bool GUI::ScanDirectory::perform(){
+void GUI::ScanDirectory::run(){
 	// Define the top directory
 	QDir dir(getFolder());
 	// Set filters to retrieve the correct files
@@ -49,5 +49,4 @@ bool GUI::ScanDirectory::perform(){
 	if(!out.isEmpty()){
 		setOutContent(out);
 	}
-	return true;
 }

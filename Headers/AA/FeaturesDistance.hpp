@@ -21,7 +21,7 @@ class AA::FeaturesDistance : public QAlgorithm {
 	QA_IMPL_CREATE(FeaturesDistance)
 	
 public:
-	bool perform();
+	void run();
 };
 
 #endif /* FeaturesDistance_hpp */

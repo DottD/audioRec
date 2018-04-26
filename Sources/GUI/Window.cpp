@@ -7,50 +7,6 @@ processed(0),
 fileCount(0) {
 	// Initial setup - mandatory
 	ui->setupUi(this);
-	// Set the line edit as drag and drop receiver
-	ui->DBFilesLineEdit->setDragEnabled(true);
-	ui->MDBLineEdit->setDragEnabled(true);
-	ui->MULineEdit->setDragEnabled(true);
-	ui->MKLineEdit->setDragEnabled(true);
-	// Set icons for record scrolling buttons
-	ui->ButtonPreviousRecord->setIcon(QIcon(":/48x48/Prev.png"));
-	ui->ButtonNextRecord->setIcon(QIcon(":/48x48/Successive.png"));
-	// Move the record visualization widgets onto other threads
-	connect(this, SIGNAL(readyToDisplay(QString)),
-			ui->ChartShowRec, SLOT(display(QString)));
-	connect(this, SIGNAL(readyToDisplay(QString)),
-			ui->ChartShowRecSpectrum, SLOT(display(QString)));
-	connect(ui->ChartShowRec, SIGNAL(raiseError(QString)),
-			this, SLOT(popupError(QString)));
-	connect(ui->ChartShowRecSpectrum, SIGNAL(raiseError(QString)),
-			this, SLOT(popupError(QString)));
-	// Set initial parameters
-	QString maxFreqText = QLocale().toString(QSettings().value("FE/MaxFreq").toDouble()/1024);
-	for(QAbstractButton* button : ui->ButtonGroupMaxFreq->buttons()){
-		if (button->text() == maxFreqText) button->setChecked(true);
-		else button->setChecked(false);
-	}
-	QString minFreqText = QLocale().toString(QSettings().value("FE/MinFreq").toDouble()/64);
-	for(QAbstractButton* button : ui->ButtonGroupMinFreq->buttons()){
-		if (button->text() == minFreqText) button->setChecked(true);
-		else button->setChecked(false);
-	}
-	QString oversamplingText = QLocale().toString(QSettings().value("FE/Oversampling").toInt()).prepend('x');
-	for(QAbstractButton* button : ui->ButtonGroupOversampling->buttons()){
-		if (button->text() == oversamplingText) button->setChecked(true);
-		else button->setChecked(false);
-	}
-	// Set chart names
-	ui->ChartShowRec->chart()->setTitle("Time domain");
-	ui->ChartShowRecSpectrum->chart()->setTitle("Frequency Domain");
-	// Set whether to use a logarithmic scale for the frequency plot
-	if (ui->CheckLogScale->isChecked()){
-		ui->ChartShowRecSpectrum->setLogScale();
-	} else {
-		ui->ChartShowRecSpectrum->setNaturalScale();
-	}
-	// Set record description
-	ui->LabelRecordDescription->setText(QLocale().toString(ui->ChartShowRec->getRecordIndex()));
 	// Set default parameters
 	QSettings settings;
 	settings.setValue("FE/MinFreq", double(4*64));
@@ -68,6 +24,84 @@ fileCount(0) {
 	settings.setValue("FE/BinWidth", int(8));
 	settings.setValue("FE/PeakHeightThreshold", double(0.01));
 	settings.setValue("Histogram/BarStep", double(0.05));
+	// Set the line edit as drag and drop receiver
+	ui->DBFilesLineEdit->setDragEnabled(true);
+	ui->MDBLineEdit->setDragEnabled(true);
+	ui->MULineEdit->setDragEnabled(true);
+	ui->MKLineEdit->setDragEnabled(true);
+	// Set icons for record scrolling buttons
+	ui->ButtonPreviousRecord->setIcon(QIcon(":/48x48/Prev.png"));
+	ui->ButtonNextRecord->setIcon(QIcon(":/48x48/Successive.png"));
+	// Connect the record visualization widgets for error handling
+	connect(ui->ChartShowRec, &ChartRecWidget::raiseError, this, &Window::popupError);
+	connect(ui->ChartShowRecSpectrum, &ChartRecWidget::raiseError, this, &Window::popupError);
+	// Set X axis title
+	ui->ChartShowRec->setProperty("xAxisTitle", "Time (s)");
+	ui->ChartShowRecSpectrum->setProperty("xAxisTitle", "Frequency (Hz)");
+	// Set initial parameters
+	QString maxFreqText = QLocale().toString(QSettings().value("FE/MaxFreq").toDouble()/1024);
+	for(QAbstractButton* button : ui->ButtonGroupMaxFreq->buttons()){
+		if (button->text() == maxFreqText) button->setChecked(true);
+		else button->setChecked(false);
+	}
+	QString minFreqText = QLocale().toString(QSettings().value("FE/MinFreq").toDouble()/64);
+	for(QAbstractButton* button : ui->ButtonGroupMinFreq->buttons()){
+		if (button->text() == minFreqText) button->setChecked(true);
+		else button->setChecked(false);
+	}
+	QString oversamplingText = QLocale().toString(QSettings().value("FE/Oversampling").toInt()).prepend('x');
+	for(QAbstractButton* button : ui->ButtonGroupOversampling->buttons()){
+		if (button->text() == oversamplingText) button->setChecked(true);
+		else button->setChecked(false);
+	}
+	// Set charts names
+	ui->ChartShowRec->chart()->setTitle("Time Domain");
+	ui->ChartShowRecSpectrum->chart()->setTitle("Frequency Domain");
+	// Create a FeaturesExtractor instance attached to ComboChooseFile
+	auto extractor = AA::FeaturesExtractor::create();
+	extractor->setKeepInput(false);
+	extractor->setSelectRecord(-1);
+	extractor->setMinFreq(QSettings().value("FE/MinFreq").toDouble());
+	extractor->setMaxFreq(QSettings().value("FE/MaxFreq").toDouble());
+	extractor->setOversampling(QSettings().value("FE/Oversampling").toInt());
+	extractor->setBEMinFilterRad(QSettings().value("FE/BEMinFilterRad").toInt());
+	extractor->setBEMaxPeakWidth(QSettings().value("FE/BEMaxPeakWidth").toDouble());
+	extractor->setBEDerivDiam(QSettings().value("FE/BEDerivDiam").toInt());
+	extractor->setBEMaxIterations(QSettings().value("FE/BEMaxIterations").toInt());
+	extractor->setBEMaxInconsistency(QSettings().value("FE/BEMaxInconsistency").toDouble());
+	extractor->setBEMaxDistNodes(QSettings().value("FE/BEMaxDistNodes").toInt());
+	extractor->setButtFilterTail(QSettings().value("FE/ButtFilterTail").toDouble());
+	extractor->setPeakRelevance(QSettings().value("FE/PeakRelevance").toDouble());
+	extractor->setPeakMinVarInfluence(QSettings().value("FE/PeakMinVarInfluence").toDouble());
+	extractor->setBinWidth(QSettings().value("FE/BinWidth").toInt());
+	extractor->setPeakHeightThreshold(QSettings().value("FE/PeakHeightThreshold").toDouble());
+	connect(extractor.data(), &QAlgorithm::raiseError, this, &Window::popupError);
+	connect(extractor.data(), &AA::FeaturesExtractor::timeSeries, ui->ChartShowRec, &GUI::ChartRecWidget::addSeries);
+	connect(extractor.data(), &AA::FeaturesExtractor::frequencySeries, ui->ChartShowRecSpectrum, &GUI::ChartRecWidget::addSeries);
+	ui->ComboChooseFile->setProperty("extractor", QVariant::fromValue(extractor));
+	// Set charts index conversion functions
+	ui->ChartShowRec->indexToXAxis = [extractor](int k){
+		double SampleRate = extractor->getOutSampleRate();
+		double MaxFreq = QSettings().value("FE/MaxFreq").toDouble();
+		double Oversampling = QSettings().value("FE/Oversampling").toDouble();
+		int RecLength = ceil(0.5 * (1.0 + sqrt(1.0 + 4.0 * SampleRate * MaxFreq)) * 2.0 / 1024.0) * 1024 / Oversampling;
+		return double(RecLength * extractor->getSelectRecord() + k) / double(SampleRate);
+	};
+	ui->ChartShowRecSpectrum->indexToXAxis = [extractor](int k){
+		double SampleRate = extractor->getOutSampleRate();
+		double MaxFreq = QSettings().value("FE/MaxFreq").toDouble();
+		double Oversampling = QSettings().value("FE/Oversampling").toDouble();
+		double RecLength = ceil(0.5 * (1.0 + sqrt(1.0 + 4.0 * SampleRate * MaxFreq)) * 2.0 / 1024.0) * 1024 / Oversampling;
+		return bin2freq(SampleRate, RecLength, double(k));
+	};
+	// Set whether to use a logarithmic scale for the frequency plot
+	if (ui->CheckLogScale->isChecked()){
+		ui->ChartShowRecSpectrum->valueToYAxis = [](double y){return log10(y+1E-8);};
+	} else {
+		ui->ChartShowRecSpectrum->valueToYAxis = [](double y){return y;};
+	}
+	// Set record description
+	ui->LabelRecordDescription->setText(QLocale().toString(0));
 	// Reset the progress bars
 	ui->DBProgressBar->reset();
 	ui->MatchingProgressBar->reset();
@@ -84,48 +118,57 @@ void GUI::Window::popupError(QString errorDescription) {
 
 void GUI::Window::on_CheckLogScale_stateChanged(int state){
 	if (ui->CheckLogScale->isChecked()){
-		ui->ChartShowRecSpectrum->setLogScale();
+		ui->ChartShowRecSpectrum->valueToYAxis = [](double y){return log10(y+1E-8);};
 	} else {
-		ui->ChartShowRecSpectrum->setNaturalScale();
+		ui->ChartShowRecSpectrum->valueToYAxis = [](double y){return y;};
 	}
 }
 
 // File Inspectors tab callbacks
 
 void GUI::Window::on_ComboChooseFile_activated(QString text){
-	// Retrieve all possible audio files paths
-	QDir dir(text);
-	QDir inputDir(ui->DBFilesLineEdit->text());
-	auto scanner = ScanDirectory::create({
-		{"Folder", ui->DBFilesLineEdit->text()},
-		{"Extensions", supportedAudioFormats}
-	});
-	scanner->run();
+	// Flatten result from the recursive scanner
 	QStringList audioFiles;
-	for(const QList<QString>& files: scanner->getOutContent()){
-		audioFiles << files;
-	}
+	for(const QStringList& files: foundFiles) audioFiles << files;
 	// Search the current selected file among them
 	QStringList selectedFile(audioFiles.filter(text));
 	if (selectedFile.size() != 1) popupErrorWindow("Only one file should be returned");
-	// Pass the file name to the widgets
-	emit readyToDisplay(selectedFile.first());
+	// Process audio file and send results to widgets
+	auto extractor = ui->ComboChooseFile->property("extractor").value<QSharedPointer<AA::FeaturesExtractor>>();
+	extractor->setFile(selectedFile.last());
+	extractor->setSelectRecord(0);
+	ui->LabelRecordDescription->setText(QLocale().toString(0));
+	// Clear all visualization widgets
+	ui->ChartShowRec->chart()->removeAllSeries();
+	ui->ChartShowRecSpectrum->chart()->removeAllSeries();
+	// Execute the extractor on another thread
+	extractor->parallelExecution();
 }
 
 void GUI::Window::on_ButtonNextRecord_clicked(){
-	quint64 idx1 = ui->ChartShowRec->stepUp();
-	quint64 idx2 = ui->ChartShowRecSpectrum->stepUp();
-	if (idx1 == idx2){
-		ui->LabelRecordDescription->setText(QLocale().toString(idx1));
-	}
+	auto extractor = ui->ComboChooseFile->property("extractor").value<QSharedPointer<AA::FeaturesExtractor>>();
+	auto recIdx = extractor->getSelectRecord();
+	if (recIdx < extractor->getOutTotalRecords()-1) ++recIdx;
+	ui->LabelRecordDescription->setText(QLocale().toString(recIdx));
+	extractor->setSelectRecord(recIdx);
+	// Clear all visualization widgets
+	ui->ChartShowRec->chart()->removeAllSeries();
+	ui->ChartShowRecSpectrum->chart()->removeAllSeries();
+	// Execute the extractor on another thread
+	extractor->parallelExecution();
 }
 
 void GUI::Window::on_ButtonPreviousRecord_clicked(){
-	quint64 idx1 = ui->ChartShowRec->stepDown();
-	quint64 idx2 = ui->ChartShowRecSpectrum->stepDown();
-	if (idx1 == idx2){
-		ui->LabelRecordDescription->setText(QLocale().toString(idx1));
-	}
+	auto extractor = ui->ComboChooseFile->property("extractor").value<QSharedPointer<AA::FeaturesExtractor>>();
+	auto recIdx = extractor->getSelectRecord();
+	if (recIdx > 0) --recIdx;
+	ui->LabelRecordDescription->setText(QLocale().toString(recIdx));
+	extractor->setSelectRecord(recIdx);
+	// Clear all visualization widgets
+	ui->ChartShowRec->chart()->removeAllSeries();
+	ui->ChartShowRecSpectrum->chart()->removeAllSeries();
+	// Execute the extractor on another thread
+	extractor->parallelExecution();
 }
 
 // Parameters tab callbacks
@@ -160,6 +203,22 @@ void GUI::Window::on_DBFilesBrowseButton_clicked(){
 	}
 }
 
+void GUI::Window::on_DBFilesLineEdit_textChanged(const QString &text){
+	// Recursively scan the input database folder for supported audio files
+	auto dirScanner = ScanDirectory::create({
+		{"Extensions", supportedAudioFormats},
+		{"Folder", text},
+		{"Recursive", true}
+	});
+	dirScanner->run();
+	// Store the results in the window instance
+	foundFiles = dirScanner->getOutContent();
+	// Update the QComboBox for file inspection
+	foreach(auto dirList, foundFiles){
+		foreach(auto file, dirList) ui->ComboChooseFile->addItem(QFileInfo(file).baseName());
+	}
+}
+
 void GUI::Window::on_PlotCtrlResetViewButton_clicked(){
 	ui->DBChartView->chart()->zoomReset();
 }
@@ -173,20 +232,14 @@ void GUI::Window::on_DBCreateButton_clicked(){
 		popupErrorWindow("An input folder must be chosen");
 	}
 	// Get the list of files in the input directory
-	auto dirScanner = ScanDirectory::create({
-		{"Extensions", supportedAudioFormats},
-		{"Folder", ui->DBFilesLineEdit->text()},
-		{"Recursive", true}
-	});
-	dirScanner->run();
-	QList<QList<QString>> dirContent = dirScanner->getOutContent();
-	if(dirContent.isEmpty()) {
+	if(foundFiles.isEmpty()) {
 		ui->DBCreateButton->setEnabled(true);
 		popupErrorWindow("Empty directory");
 	}
 	// Set up features extraction parameters for later use
 	QAlgorithm::PropertyMap FEPars = {
 		{"KeepInput", false},
+		{"File", QString()},
 		{"SelectRecord", -1},
 		{"MinFreq", QSettings().value("FE/MinFreq")},
 		{"MaxFreq", QSettings().value("FE/MaxFreq")},
@@ -206,21 +259,21 @@ void GUI::Window::on_DBCreateButton_clicked(){
 	// Declare a list of extractors (this intermediate step will avoid reloading files and recomputing the features)
 	// extractors will have the same structure of dirContent (1-1 correspondance)
 	QList<QList<QSharedPointer<AA::FeaturesExtractor>>> extractors;
-	for(const auto& dir: dirContent){// foreach subdir
+	for(const auto& dir: foundFiles){// foreach subdir
 		// Create a new sublist
 		extractors << QList<QSharedPointer<AA::FeaturesExtractor>>();
 		for(const auto& file: dir){ // foreach file
 			// Set current file as input to an audio reader instance
 			// Extract features after the reader has completed its task
-			auto reader = AA::AudioReader::create({{"File", file}});
+			FEPars["File"] = file;
 			auto extractor = AA::FeaturesExtractor::create(FEPars);
-			reader >> extractor;
+			extractor->setObjectName(QFileInfo(file).baseName());
 			// Add to extractors to the last sublist created
 			extractors.last() << extractor;
 		}
 	}
-	// Declare and initialize the total number of files to process
-	int n_files = 0;
+	// Declare and initialize the total number of distances to process
+	int n_distances = 0;
 	// Intra-speaker features
 	{
 		// Compute the histogram of all the intra-speaker distances
@@ -229,6 +282,9 @@ void GUI::Window::on_DBCreateButton_clicked(){
 			{"OITable", QVariant::fromValue(QMapStringString({{"Distance","Values"}})) },
 			{"BarStep", QSettings().value("Histogram/BarStep")}
 		}, this);
+		histCompute->setObjectName("Intra histogram");
+		// Compute the number of distances used for extra-speaker distribution
+		int n_int_dist = 0;
 		// Define a map of already used pairs to avoid to compute the same distance twice
 		QSet<QSet<QAlgorithm*>> used_pairs;
 		for(auto& dir: extractors){
@@ -244,27 +300,38 @@ void GUI::Window::on_DBCreateButton_clicked(){
 						auto distanceCalculator = AA::FeaturesDistance::create({ {"KeepInput", false} }, this);
 						outerExtractor >> distanceCalculator;
 						innerExtractor >> distanceCalculator >> histCompute;
+						distanceCalculator->setObjectName(outerExtractor->objectName().replace(" extract", "")+"-"+innerExtractor->objectName().replace(" extract", ""));
 						// Connect to progress bar
-						connect(distanceCalculator.data(), SIGNAL(justFinished()), this, SLOT(on_DBProgressBarStepUp()));
+						connect(distanceCalculator.data(), &QAlgorithm::justFinished, [this](){
+							this->ui->DBProgressBar->setValue( this->ui->DBProgressBar->value()+1 );
+							this->ui->DBProgressBar->update();
+							QApplication::processEvents();
+						});
 						// Increment the files number
-						n_files++;
+						n_int_dist++;
 						// Add this pair of extractors to used_pairs
 						used_pairs << QSet<QAlgorithm*>({outerExtractor.data(), innerExtractor.data()});
 					}
 				}
 			}
 		}
-		// When the histogram is computed draw the histogram
-		connect(histCompute.data(), SIGNAL(justFinished()), ui->DBChartView, SLOT(plotHistogram()));
-		// Change output names and perform fitting
-		this->intraFitting = UMF::FittingGaussExp::create({
-			{"OITable", QVariant::fromValue(QMapStringString({{"HistX","X"},{"HistY","Y"}})) }
-		}, this);
-		this->intraFitting->setObjectName("IntraFitting");
-		histCompute >> this->intraFitting;
-		// When the fitting algorithm finishes call on_DBCreated and plot the fitted curve
-		connect(this->intraFitting.data(), SIGNAL(justFinished()), this, SLOT(on_DBCreated()));
-		connect(this->intraFitting.data(), SIGNAL(justFinished()), ui->DBChartView, SLOT(plotGaussianCurve()));
+		n_distances += n_int_dist;
+		// Proceed only if there is at least one distance to process
+		if (n_int_dist > 0){
+			// When the histogram is computed draw the histogram
+			connect(histCompute.data(), &QAlgorithm::justFinished, ui->DBChartView, &DatabaseChart::plotHistogram);
+			// Change output names and perform fitting
+			this->intraFitting = UMF::FittingGaussExp::create({
+				{"OITable", QVariant::fromValue(QMapStringString({{"HistX","X"},{"HistY","Y"}})) }
+			}, this);
+			this->intraFitting->setObjectName("IntraFitting");
+			histCompute >> this->intraFitting;
+			// When the fitting algorithm finishes call on_DBCreated and plot the fitted curve
+			connect(intraFitting.data(), &QAlgorithm::justFinished, this, &Window::on_DBCreated);
+			connect(intraFitting.data(), &QAlgorithm::justFinished, ui->DBChartView, &DatabaseChart::plotGaussianCurve);
+			QAlgorithm::improveTree(intraFitting.data());
+			QtConcurrent::run(static_cast<QAlgorithm*>(intraFitting.data()), &QAlgorithm::parallelExecution);
+		}
 	}
 	// Extra-speaker features
 	{
@@ -274,6 +341,9 @@ void GUI::Window::on_DBCreateButton_clicked(){
 			{"OITable", QVariant::fromValue(QMapStringString({{"Distance","Values"}})) },
 			{"BarStep", QSettings().value("Histogram/BarStep")}
 		}, this);
+		histCompute->setObjectName("Extra histogram");
+		// Compute the number of distances used for extra-speaker distribution
+		int n_ext_dist = 0;
 		// Define a map of already used pairs to avoid to compute the same distance twice
 		QSet<QSet<QAlgorithm*>> used_pairs;
 		for(auto& outerDir: extractors){
@@ -293,10 +363,15 @@ void GUI::Window::on_DBCreateButton_clicked(){
 							auto distanceCalculator = AA::FeaturesDistance::create({ {"KeepInput", false} }, this);
 							outerExtractor >> distanceCalculator;
 							innerExtractor >> distanceCalculator >> histCompute;
+							distanceCalculator->setObjectName(outerExtractor->objectName().replace(" extract", "")+"-"+innerExtractor->objectName().replace(" extract", ""));
 							// Connect to progress bar
-							connect(distanceCalculator.data(), SIGNAL(justFinished()), this, SLOT(on_DBProgressBarStepUp()));
+							connect(distanceCalculator.data(), &QAlgorithm::justFinished, [this](){
+								this->ui->DBProgressBar->setValue( this->ui->DBProgressBar->value()+1 );
+								this->ui->DBProgressBar->update();
+								QApplication::processEvents();
+							});
 							// Increment the files number
-							n_files++;
+							n_ext_dist++;
 							// Add this pair of extractors to used_pairs
 							used_pairs << QSet<QAlgorithm*>({outerExtractor.data(), innerExtractor.data()});
 						}
@@ -304,29 +379,27 @@ void GUI::Window::on_DBCreateButton_clicked(){
 				}
 			}
 		}
-		// When the histogram is computed draw the histogram
-		connect(histCompute.data(), SIGNAL(justFinished()), ui->DBChartView, SLOT(plotHistogram()));
-		// Change output names and perform fitting
-		this->extraFitting = UMF::FittingGaussExp::create({
-			{"OITable", QVariant::fromValue(QMapStringString({{"HistX","X"},{"HistY","Y"}})) }
-		}, this);
-		this->extraFitting->setObjectName("ExtraFitting");
-		histCompute >> this->extraFitting;
-		// When the fitting algorithm finishes call on_DBCreated and plot the fitted curve
-		connect(this->extraFitting.data(), SIGNAL(justFinished()), this, SLOT(on_DBCreated()));
-		connect(this->extraFitting.data(), SIGNAL(justFinished()), ui->DBChartView, SLOT(plotGaussianCurve()));
+		n_distances += n_ext_dist;
+		// Proceed only if there is at least one distance to process
+		if (n_ext_dist > 0){
+			// When the histogram is computed draw the histogram
+			connect(histCompute.data(), &QAlgorithm::justFinished, ui->DBChartView, &DatabaseChart::plotHistogram);
+			// Change output names and perform fitting
+			this->extraFitting = UMF::FittingGaussExp::create({
+				{"OITable", QVariant::fromValue(QMapStringString({{"HistX","X"},{"HistY","Y"}})) }
+			}, this);
+			this->extraFitting->setObjectName("ExtraFitting");
+			histCompute >> this->extraFitting;
+			// When the fitting algorithm finishes call on_DBCreated and plot the fitted curve
+			connect(extraFitting.data(), &QAlgorithm::justFinished, this, &Window::on_DBCreated);
+			connect(extraFitting.data(), &QAlgorithm::justFinished, ui->DBChartView, &DatabaseChart::plotGaussianCurve);
+			QAlgorithm::improveTree(extraFitting.data());
+			QtConcurrent::run(static_cast<QAlgorithm*>(extraFitting.data()), &QAlgorithm::parallelExecution);
+		}
 	}
 	// Finally set up the progress bar
-	ui->DBProgressBar->setRange(0, n_files);
+	ui->DBProgressBar->setRange(0, n_distances-1);
 	ui->DBProgressBar->reset();
-	// Start computation
-	QThreadPool::globalInstance()->start(this->intraFitting.data());
-	QThreadPool::globalInstance()->start(this->extraFitting.data());
-}
-
-void GUI::Window::on_DBProgressBarStepUp(){
-	ui->DBProgressBar->setValue( ui->DBProgressBar->value()+1 );
-	ui->DBProgressBar->update();
 }
 
 void GUI::Window::on_DBCreated(){
@@ -383,6 +456,7 @@ void GUI::Window::on_MCtrlMatchButton_clicked(){
 	ui->MatchingResultsLabel->setText("");
 	// Load default parameters
 	QAlgorithm::PropertyMap FEPars = {
+		{"File", QString()},
 		{"SelectRecord", -1},
 		{"MinFreq", QSettings().value("FE/MinFreq")},
 		{"MaxFreq", QSettings().value("FE/MaxFreq")},
@@ -420,21 +494,21 @@ void GUI::Window::on_MCtrlMatchButton_clicked(){
 	// Declare and initialize the total number of files
 	int n_files = 0;
 	for(const QString& MKFile: MKScan->getOutContent().first().first()){
-		auto MKRead = AA::AudioReader::create({{"File",{MKFile}}});
+		FEPars["File"] = MKFile;
 		auto MKExtract = AA::FeaturesExtractor::create(FEPars);
 		// Increment the files number and connect to the progress bar
 		n_files++;
 		connect(MKExtract.data(), SIGNAL(justFinished()), this, SLOT(on_MatchingProgressBarStepUp()));
 		for(const QString& MUFile: MUScan->getOutContent().first().first()){
-			auto MURead = AA::AudioReader::create({{"File",{MUFile}}});
+			FEPars["File"] = MUFile;
 			auto MUExtract = AA::FeaturesExtractor::create(FEPars);
 			auto DistCalculator = AA::FeaturesDistance::create({ {"KeepInput", false} });
 			// Increment the files number and connect to the progress bar
 			n_files++;
 			connect(MUExtract.data(), SIGNAL(justFinished()), this, SLOT(on_MatchingProgressBarStepUp()));
 			// Link algorithms
-			MKRead >> MKExtract >> DistCalculator;
-			MURead >> MUExtract >> DistCalculator >> Histogram;
+			MKExtract >> DistCalculator;
+			MUExtract >> DistCalculator >> Histogram;
 		}
 	}
 	// Connections - plot the histogram

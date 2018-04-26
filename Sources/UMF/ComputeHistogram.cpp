@@ -1,10 +1,9 @@
 #include <UMF/ComputeHistogram.hpp>
 
-bool UMF::ComputeHistogram::perform(){
+void UMF::ComputeHistogram::run(){
 	const QVector<double> values = getInValues();
 	if (values.isEmpty()){
 		qWarning("%s", "Cannot compute histogram: values empty!");
-		return false;
 	}
 	// Create an arma header over the input vector
 	const arma::vec data(values.data(), values.size());
@@ -26,5 +25,4 @@ bool UMF::ComputeHistogram::perform(){
 	for(double& ely: y) Y << ely;
 	setOutHistX(X);
 	setOutHistY(Y);
-	return true;
 }

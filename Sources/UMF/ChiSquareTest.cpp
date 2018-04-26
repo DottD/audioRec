@@ -1,6 +1,6 @@
 #include <UMF/ChiSquareTest.hpp>
 
-bool UMF::ChiSquareTest::perform(){
+void UMF::ChiSquareTest::run(){
 	// Check if input is two distributions of equal size
 	Q_ASSERT(getInDistributions().size() == 2);
 	Q_ASSERT(getInDistributions().at(0).size() == getInDistributions().at(1).size());
@@ -21,5 +21,4 @@ bool UMF::ChiSquareTest::perform(){
 	// Compare the chi square test statistic with the critical value
 	setOutDistrAreEqual(chisquare < critVal); // H0 hypothesis is accepted when the statistic is less than the critical value
 	setOutSimilarity( alglib::errorfunctionc(chisquare / double(getInDistributions().at(0).size())) );
-	return true;
 }

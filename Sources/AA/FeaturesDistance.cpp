@@ -1,6 +1,6 @@
 #include <AA/FeaturesDistance.hpp>
 
-bool AA::FeaturesDistance::perform(){
+void AA::FeaturesDistance::run(){
 	// Check input
 	Q_ASSERT(getInFeatures().size() == 2);
 	const QVector<double>& Features1 = getInFeatures().at(0);
@@ -38,7 +38,5 @@ bool AA::FeaturesDistance::perform(){
 		setOutDistance( sqrt( arma::as_scalar(m * arma::inv(C) * m.t()) ) );
 	}catch(std::exception exc){
 		raiseError(exc.what());
-		return false;
 	}
-	return true;
 }

@@ -1,6 +1,6 @@
 #include <AA/FeaturesExtractor.hpp>
 
-bool AA::FeaturesExtractor::perform(){
+void AA::FeaturesExtractor::run(){
 	// Define a function to convert arma array to Qt vector
 	auto armaToQ = [](const arma::vec& vec){
 		QVector<double> qvec;
@@ -8,22 +8,47 @@ bool AA::FeaturesExtractor::perform(){
 		memcpy(qvec.data(), vec.memptr(), vec.size()*sizeof(double));
 		return qvec;
 	};
-	const QVector<double> Samples = getInSamples();
-	const quint32& SampleRate = getInSampleRate();
+	// Open the audio file
+	sf::InputSoundFile file;
+	if (!file.openFromFile(getFile().toStdString())) abort("Unable to open "+getFile());
+	// Get audio info
+	const auto sampleCount = file.getSampleCount();
+	setOutSampleRate(file.getSampleRate());
 	// Compute the record length (the first multiple of 1024 greater than the needed value)
 	// Divide by oversampling: during the processing the signal is oversampled
-	int recLength = ceil(0.5 * (1.0 + sqrt(1.0 + 4.0 * SampleRate * getMaxFreq())) * 2.0 / 1024.0) * 1024 / getOversampling();
+	setOutRecordLength(ceil(0.5 * (1.0 + sqrt(1.0 + 4.0 * getOutSampleRate() * getMaxFreq())) * 2.0 / 1024.0) * 1024 / getOversampling());
 	// Get the number of records
-	int numRecords = ceil(double(Samples.size()) / double(recLength));
-	// Scan each record
+	setOutTotalRecords(ceil(double(sampleCount) / double(getOutRecordLength())));
+	// If a record is selected, change loop limits accordingly
+	unsigned int recIdx = 0;
+	unsigned int maxRecIdx = getOutTotalRecords();
+	if (getSelectRecord() >= 0){
+		recIdx = getSelectRecord();
+		maxRecIdx = recIdx + 1;
+		file.seek(recIdx * getOutRecordLength());
+	}
+	// Scan each record, or the selected one
 	QVector<double> features;
-	for (unsigned int recIdx = 0; recIdx < numRecords; recIdx++) {
-		if(getSelectRecord() > 0 && getSelectRecord() != recIdx) continue;
-		int pos = recIdx * recLength;
-		QVector<double> localSamples = Samples.mid(pos, recLength);
-		arma::vec samples(localSamples.data(), localSamples.size(), false, false);
-		// The last record may be unreliable and we can exploit too few frequencies, so skip it
-		if (samples.size() < recLength) continue;
+	sf::Int16* samplesData = new sf::Int16[getOutRecordLength()*file.getChannelCount()];
+	for (; recIdx < maxRecIdx; recIdx++) {
+		// Read a record from file (the last, if incomplete, will be discarded)
+		if (file.read(samplesData, getOutRecordLength()) < getOutRecordLength())
+			break; // end of file reached
+		// Eventually split the channels and compute their mean
+		// samplesData is modified in-place, the first getOutRecordLength()
+		// elements are the average signal between channels, the remainings
+		// are all zeros.
+		for(int k = 0; k < getOutRecordLength(); ++k){
+			sf::Int16 mean = 0;
+			for(int c = 0; c < file.getChannelCount(); ++c){
+				mean += samplesData[file.getChannelCount() * k + c];
+				samplesData[file.getChannelCount() * k + c] = 0;
+			}
+			samplesData[k] = mean / file.getChannelCount();
+		}
+		arma::Col<sf::Int16> integerSamples(samplesData, getOutRecordLength(), false, false);
+		// Convert to a normalized floating point signal
+		arma::vec samples = arma::conv_to<arma::vec>::from(integerSamples) / double(0x7FFF);
 		// Take into account the oversampling parameter
 		samples = oversample(samples, getOversampling());
 		// Windowing (butterworth window)
@@ -40,10 +65,11 @@ bool AA::FeaturesExtractor::perform(){
 			// Store the mean in each bin
 			binnedSamples[k] = arma::sum(samples.subvec(k*getBinWidth(), (k+1)*getBinWidth()-1)) / double(getBinWidth());
 		}
-		Q_EMIT emitArray((armaToQ(binnedSamples)));
+		Q_EMIT timeSeries(armaToQ(binnedSamples));
 		// Compute the signal spectrum (the Fourier Mathematica command divide by sqrt(N))
 		arma::vec wholeSpectrum = arma::square(arma::abs(arma::fft(binnedSamples)))/double(binnedSamples.size());
 		arma::vec spectrum = wholeSpectrum.subvec(0, wholeSpectrum.size()/2+1); // take relevant part
+		Q_EMIT frequencySeries(armaToQ(spectrum));
 		// Estimate the background and subtract it from the spectrum
 		arma::vec estBackSpectrum = backgroundEstimation(spectrum,
 														 getBEMinFilterRad(), getBEMaxPeakWidth(),
@@ -51,12 +77,12 @@ bool AA::FeaturesExtractor::perform(){
 														 getBEMaxInconsistency(), getBEMaxDistNodes());
 		// Final gaussian smoothing
 		arma::vec foreSpectrum = spectrum-estBackSpectrum;
+		Q_EMIT frequencySeries(armaToQ(foreSpectrum));
 		// Split the spectrum in three intervals and get the formants
-		double intervalStartBin = round(freq2bin(SampleRate, recLength, getMinFreq()) / double(getBinWidth()));
+		double intervalStartBin = round(freq2bin(getOutSampleRate(), getOutRecordLength(), getMinFreq()) / double(getBinWidth()));
 		double intervalWidthBin = floor((foreSpectrum.size()-intervalStartBin)/3);
 		arma::vec4 edges = intervalStartBin + arma::regspace(0, 3) * (intervalWidthBin-1);
 		foreSpectrum = foreSpectrum.subvec(edges(0), edges(3));
-		Q_EMIT emitArray((armaToQ(foreSpectrum)));
 		// Peaks detection
 		std::vector<uint64_t> maxPeaks, minPeaks;
 		std::vector<double> maxPeaksProm, minPeaksProm;
@@ -103,6 +129,6 @@ bool AA::FeaturesExtractor::perform(){
 		// Append to the features array
 		features << V1 << V2 << V3;
 	}
+	delete samplesData;
 	setOutFeatures(features);
-	return true;
 }

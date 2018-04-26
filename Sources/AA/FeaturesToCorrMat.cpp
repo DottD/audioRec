@@ -1,6 +1,6 @@
 #include <AA/FeaturesToCorrMat.hpp>
 
-bool AA::FeaturesToCorrMat::perform(){
+void AA::FeaturesToCorrMat::run(){
 	Q_ASSERT(!getInFeatures().empty());
 	// Process each features set independently
 	const QVector<double>& features = getInFeatures();
@@ -12,5 +12,4 @@ bool AA::FeaturesToCorrMat::perform(){
 	arma::mat matCorrd = arma::conv_to<arma::mat>::from(matCorr) / arma::mat::elem_type(maxVal);
 	arma::uchar_mat matCorrb = arma::conv_to<arma::uchar_mat>::from(matCorrd * 255);
 	setOutCorrMat( QImage(matCorrb.memptr(), matCorrb.n_cols, matCorrb.n_rows, QImage::Format_Grayscale8) );
-	return true;
 }

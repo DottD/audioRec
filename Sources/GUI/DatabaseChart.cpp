@@ -39,8 +39,7 @@ void GUI::DatabaseChart::plotHistogram(){
 	chart()->createDefaultAxes();
 }
 
-void GUI::DatabaseChart::plotGaussianCurve(QVector<double> X,
-										   QVector<double> Y){
+void GUI::DatabaseChart::plotGaussianCurve(){
 	// Define a short form to plot a given curve
 	auto plotCurve = [this](QVector<double> X, QVector<double> Y){
 		QLineSeries* fittingCurve = new QLineSeries;
@@ -50,35 +49,30 @@ void GUI::DatabaseChart::plotGaussianCurve(QVector<double> X,
 		for(int l = 0; l < X.size(); l++) fittingCurve->append(X[l], Y[l]);
 		this->chart()->addSeries(fittingCurve);
 	};
-	// Use the given input, if any, otherwise look at the sender
-	if(!X.empty() && !Y.empty() && X.size() == Y.size()){
-		plotCurve(X, Y);
+	// Get the sender object
+	UMF::Fitting1D* fitting = dynamic_cast<UMF::Fitting1D*>(QObject::sender());
+	// Check if it is a finished Fitting1D algorithm
+	if(fitting != Q_NULLPTR && fitting->hasFinished()){
+		Q_ASSERT(!fitting->getInX().empty());
+		Q_ASSERT(!fitting->getOutCoefficients().empty());
+		// Get the output
+		const QVector<double>& x = fitting->getInX();
+		const QVector<double>& c = fitting->getOutCoefficients();
+		QVector<double> y = fitting->evaluate(c, x);
+		plotCurve(x, y);
 	} else {
-		// Get the sender object
-		UMF::Fitting1D* fitting = dynamic_cast<UMF::Fitting1D*>(QObject::sender());
-		// Check if it is a finished Fitting1D algorithm
-		if(fitting != Q_NULLPTR && fitting->hasFinished()){
-			Q_ASSERT(!fitting->getInX().empty());
-			Q_ASSERT(!fitting->getOutCoefficients().empty());
+		// Try to convert to an Evaluate1D
+		UMF::Evaluate1D* evaluate = dynamic_cast<UMF::Evaluate1D*>(QObject::sender());
+		// Check if it is a finished Evaluate1D algorithm
+		if(evaluate != Q_NULLPTR && evaluate->hasFinished()){
+			Q_ASSERT(!evaluate->getInX().empty());
+			Q_ASSERT(!evaluate->getOutY().empty());
 			// Get the output
-			const QVector<double>& x = fitting->getInX();
-			const QVector<double>& c = fitting->getOutCoefficients();
-			QVector<double> y = fitting->evaluate(c, x);
+			const QVector<double>& x = evaluate->getInX();
+			const QVector<double>& y = evaluate->getOutY();
 			plotCurve(x, y);
 		} else {
-			// Try to convert to an Evaluate1D
-			UMF::Evaluate1D* evaluate = dynamic_cast<UMF::Evaluate1D*>(QObject::sender());
-			// Check if it is a finished Evaluate1D algorithm
-			if(evaluate != Q_NULLPTR && evaluate->hasFinished()){
-				Q_ASSERT(!evaluate->getInX().empty());
-				Q_ASSERT(!evaluate->getOutY().empty());
-				// Get the output
-				const QVector<double>& x = evaluate->getInX();
-				const QVector<double>& y = evaluate->getOutY();
-				plotCurve(x, y);
-			} else {
-				Q_EMIT raiseError("Sender must be a Fitting1D or an Evaluate1D");
-			}
+			Q_EMIT raiseError("Sender must be a Fitting1D or an Evaluate1D");
 		}
 	}
 	// Update the view
