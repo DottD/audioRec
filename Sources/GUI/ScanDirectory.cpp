@@ -12,8 +12,24 @@ void GUI::ScanDirectory::run(){
 	// Declare the output list
 	QList<QList<QString>> out;
 	// Choose between recursive and non-recursive scan
+	// Anyway look for files directly contained in the given folder
+	{
+		// Declare the output sub-list
+		QList<QString> subOut;
+		// Reassign dir pointing to the current directory
+		dir.setPath(getFolder());
+		// Assign the files contained in the current directory to a temporary list
+		subOut << dir.entryList(getExtensions());
+		// If the current list is empty add nothing
+		if(!subOut.isEmpty()){
+			// Change every path contained there to an absolute one
+			for(QString& file: subOut) file = dir.absoluteFilePath(file);
+			// Append the current list of strings to the general entries list
+			out << subOut;
+		}
+	}
+	// Recursively scan the subdirectories
 	if(getRecursive()){
-		// Skip files directly included in the top directory
 		// Scan found directories
 		while (dirIt.hasNext()) {
 			// Declare the output sub-list
@@ -29,20 +45,6 @@ void GUI::ScanDirectory::run(){
 				// Append the current list of strings to the general entries list
 				out << subOut;
 			}
-		}
-	} else {
-		// Declare the output sub-list
-		QList<QString> subOut;
-		// Reassign dir pointing to the current directory
-		dir.setPath(getFolder());
-		// Assign the files contained in the current directory to a temporary list
-		subOut << dir.entryList(getExtensions());
-		// If the current list is empty add nothing
-		if(!subOut.isEmpty()){
-			// Change every path contained there to an absolute one
-			for(QString& file: subOut) file = dir.absoluteFilePath(file);
-			// Append the current list of strings to the general entries list
-			out << subOut;
 		}
 	}
 	// Set output

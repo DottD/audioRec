@@ -16,17 +16,34 @@
 // Other libraries
 #include <ui_Window.h>
 #include <QAlgorithm.hpp>
-#include <QAlgorithmEnvelope.hpp>
 #include <UMF/ComputeHistogram.hpp>
-#include <UMF/Fitting1D.hpp>
 #include <UMF/Evaluate1D.hpp>
-#include <UMF/ChiSquareTest.hpp>
+#include <UMF/CurveNormalization.hpp>
+#include <AA/ComputeProbability.hpp>
 #include <AA/FeaturesDistance.hpp>
 #include <GUI/DatabaseChart.hpp>
 #include <GUI/ScanDirectory.hpp>
+#include <GUI/savewindow.hpp>
 
 #ifndef popupErrorWindow
 #define popupErrorWindow(text) {popupError(text);return;}
+#endif
+
+#ifndef addEnumSetting
+#define addEnumSetting(_settings_, _class_, _key_, _value_)									\
+{																							\
+	QString Key = _key_;																	\
+	auto& SMO = _class_::staticMetaObject;													\
+	auto Value = QVariant::fromValue(_class_::_value_);										\
+	auto EnumName = QString(Value.typeName()).split("::").takeLast();						\
+	auto Enum = SMO.enumerator(SMO.indexOfEnumerator(EnumName.toStdString().c_str()));		\
+	_settings_.setValue(Key, Value.toLongLong());											\
+	_settings_.beginGroup(Key+"Enum");														\
+	for(int k = 0; k < Enum.keyCount(); ++k){												\
+		_settings_.setValue(Enum.key(k), Enum.keyToValue(Enum.key(k)));						\
+	}																						\
+	_settings_.endGroup();																	\
+}
 #endif
 
 namespace GUI {
@@ -47,8 +64,13 @@ private:
 	const QStringList supportedAudioFormats = {"*.wav"}; /**< List of supported audio file formats */
 	int processed, /**< Number of audio files processed */
 	fileCount; /**< Total number of audio files to be processed */
-	QSharedPointer<UMF::FittingGaussExp> extraFitting, intraFitting;
 	QList<QList<QString>> foundFiles;
+	
+	QAlgorithm::PropertyMap getPropsInGroup(const QString& group);
+	
+	void setupSettingsTab();
+	
+	void resizeEvent(QResizeEvent *event);
 	
 	private Q_SLOTS:
 	
@@ -56,34 +78,6 @@ private:
 	 Displays an error as a popup, with optional description, without quitting the graphical interface.
 	 */
 	Q_SLOT void popupError(QString errorDescription);
-	
-	/** Handle log scale checkbox. */
-	Q_SLOT void on_CheckLogScale_stateChanged(int state);
-	
-	// File Inspectors tab callbacks *********************************
-	
-	/** Combo box for file choice callback.
-	 This callback is executed whenever the user click on a choice in the combo box.
-	 This function executes a thread to load the selected audio file, and then make the first record show.
-	 */
-	Q_SLOT void on_ComboChooseFile_activated(QString);
-	
-	/** Send to charts the command to display the next record */
-	Q_SLOT void on_ButtonNextRecord_clicked();
-	
-	/** Send to charts the command to display the previous record */
-	Q_SLOT void on_ButtonPreviousRecord_clicked();
-	
-	// Parameters tab callbacks *********************************
-	
-	/** Save the parameter with maximum frequency specification. */
-	Q_SLOT void on_ButtonGroupMaxFreq_buttonClicked(QAbstractButton*);
-	
-	/** Save the parameter with minimum frequency specification. */
-	Q_SLOT void on_ButtonGroupMinFreq_buttonClicked(QAbstractButton*);
-	
-	/** Save the parameter with minimum frequency specification. */
-	Q_SLOT void on_ButtonGroupOversampling_buttonClicked(QAbstractButton*);
 	
 	// DB Creation tab callbacks *********************************
 	
@@ -95,16 +89,16 @@ private:
 	/** Scan the database directory and store the result. */
 	Q_SLOT void on_DBFilesLineEdit_textChanged(const QString &text);
 	
-	/** Callback that resets the view to its original zoom and scroll. */
-	Q_SLOT void on_PlotCtrlResetViewButton_clicked();
-	
 	/** Create database button callback.
 	 Computes the distances between every pair of feature vectors.
 	 */
 	Q_SLOT void on_DBCreateButton_clicked();
-	
+		
 	/** Save the database to file. */
-	Q_SLOT void on_DBCreated();
+	Q_SLOT void on_DBSaveButton_clicked();
+	
+	/** Load the database to file. */
+	Q_SLOT void on_DBLoadButton_clicked();
 	
 	/** Clear the DB graphic view. */
 	Q_SLOT void on_PlotCtrlCleanButton_clicked();
@@ -117,24 +111,34 @@ private:
 	/** Matching tab - start matching callback. */
 	Q_SLOT void on_MCtrlMatchButton_clicked();
 	
-	/** Instructs the progress bar to increase its value. */
-	Q_SLOT void on_MatchingProgressBarStepUp();
-	
-	/** Matching tab - handle the newly computed score. */
-	Q_SLOT void on_newResult();
-	
-	/** Matching tab - input DB browse button callback. */
-	Q_SLOT void on_MDBBrowseButton_clicked();
-	
-	/** Matching tab - culprit audio browse button callback. */
-	Q_SLOT void on_MKBrowseButton_clicked();
-	
 	/** Matching tab - suspects folder browse button callback. */
 	Q_SLOT void on_MUBrowseButton_clicked();
 	
-Q_SIGNALS:
-	/** Signal emitted when a file path has been selected */
-	Q_SIGNAL void readyToDisplay(QString dir);
+	Q_SLOT void on_TabWidget_currentChanged(int index);
+	
+	Q_SLOT void on_MLoadDatabaseButton_clicked();
+	
+	// File Inspectors tab callbacks *********************************
+	
+	/** Send to charts the command to display the next record */
+	Q_SLOT void on_ButtonNextRecord_clicked();
+	
+	/** Send to charts the command to display the previous record */
+	Q_SLOT void on_ButtonPreviousRecord_clicked();
+	
+	/** Respond to the browse button and open a file dialog */
+	Q_SLOT void on_FIBrowseButton_clicked();
+	
+	/** Scan the database directory and store the result. */
+	Q_SLOT void on_FILineEdit_textChanged(const QString& selectedFile);
+	
+	/** Handle log scale checkbox. */
+	Q_SLOT void on_CheckLogScale_stateChanged(int state);
+	
+	// Settings Tab callbacks *********************************
+	
+	/** Reset parameters to their default values. */
+	Q_SLOT void on_ResetParametersButton_clicked();
 };
 
 #endif // CAVA_GUI_h

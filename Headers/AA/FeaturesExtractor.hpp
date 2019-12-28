@@ -3,8 +3,17 @@
 
 #include <QScopedPointer>
 #include <QAlgorithm.hpp>
-#include <UMF/functions.hpp>
+#include <UMF/SignalProcessing.hpp>
 #include <SFML/Audio/InputSoundFile.hpp>
+#include <SFML/System/Mutex.hpp>
+#include <SFML/System/Lock.hpp>
+#include <TMath.h>
+#include <ROOT/TSeq.hxx>
+#include <TSpectrum.h>
+#include <TVector.h>
+#include <TH1D.h>
+#include <TF1.h>
+#include <alglib/fasttransforms.h>
 
 namespace AA {
 	class FeaturesExtractor;
@@ -31,31 +40,62 @@ class AA::FeaturesExtractor : public QAlgorithm {
 	/** Directory pointing to the file to be read. */
 	QA_PARAMETER(QString, File, QString())
 	/** Record index to be evaluated. */
-	QA_PARAMETER(int, SelectRecord, int())
+	QA_PARAMETER(int, SelectRecord, -1)
 	/** Minimum frequency allowed */
-	QA_PARAMETER(double, MinFreq, double())
+	QA_PARAMETER(double, MinimumFrequency, 200.0)
 	/** Maximum frequency allowed */
-	QA_PARAMETER(double, MaxFreq, double())
-	/** Oversampling */
-	QA_PARAMETER(int, Oversampling, int())
-	/** Radius of the minimum filter used in the background estimation stage */
-	QA_PARAMETER(int, BEMinFilterRad, int())
-	/** Maximum peak width allowed during background estimation */
-	QA_PARAMETER(double, BEMaxPeakWidth, double())
-	/** Derivative estimation diameter used during the background estimation */
-	QA_PARAMETER(int, BEDerivDiam, int())
-	/** Maximum number of iterations performed in the background estimation */
-	QA_PARAMETER(int, BEMaxIterations, int())
-	/** Maximum inconsistency allowed, used as halting condition in b.e. */
-	QA_PARAMETER(double, BEMaxInconsistency, double())
-	/** Maximum distance between the nodes (b.e.) */
-	QA_PARAMETER(int, BEMaxDistNodes, int())
-	/** Size of the Butterworth filter tail */
-	QA_PARAMETER(double, ButtFilterTail, double())
-	QA_PARAMETER(double, PeakRelevance, double())
-	QA_PARAMETER(double, PeakMinVarInfluence, double())
-	QA_PARAMETER(int, BinWidth, int())
-	QA_PARAMETER(double, PeakHeightThreshold, double())
+	QA_PARAMETER(double, MaximumFrequency, 4000.0)
+	/** Maximum allowed spectrum leakage.
+	 This parameter will affect the record length. Namely,
+	 a larger value will reduce the record length, thus speeding up the algorithm
+	 and, on the other hand, will increase the spectrum leakage, as described
+	 in <a href="http://www.jot.fm/issues/issue_2009_11/column2/">Douglas A. Lyon: “The Discrete Fourier Transform, Part 4: Spectral Leakage”</a>.
+	 */
+	QA_PARAMETER(double, MaximumSpectrumLeakage, 10.0)
+	/** Operation performed to reduce channles.
+	 @sa UMF::ReduceChannels, UMF::ReduceChannels::operation
+	 */
+	QA_PARAMETER(int, ChannelsOperation, UMF::ReduceChannels::average)
+	/** How channels are arranged in the input file.
+	 @sa UMF::ReduceChannels, UMF::ReduceChannels::channels
+	 */
+	QA_PARAMETER(int, ChannelsArrangement, UMF::ReduceChannels::interleaved)
+	/** Function used for windowing.
+	 @sa UMF::Windowing, UMF::Windowing::function
+	 */
+	QA_PARAMETER(int, WindowingFunction, UMF::Windowing::hann)
+	/** Border extrapolation method.
+	 @sa UMF::ArrayPad, UMF::ArrayPad::border_type
+	 */
+	QA_PARAMETER(int, ExtrapolationMethod, UMF::ArrayPad::constant)
+	/** Width of the Gaussian filter applied to the input signal.
+	 @sa UMF::GaussianFilter
+	 */
+	QA_PARAMETER(int, GaussianFilterWidth, 5)
+	/** Number of iterations for background suppression.
+	 @sa UMF::SpectrumRemoveBackground
+	 */
+	QA_PARAMETER(int, BackIterations, 6)
+	/** Direction used for background suppression.
+	 @sa UMF::SpectrumRemoveBackground
+	 */
+	QA_PARAMETER(int, BackDirection, TSpectrum::kBackIncreasingWindow)
+	/** Filter order used for background suppression.
+	 @sa UMF::SpectrumRemoveBackground
+	 */
+	QA_PARAMETER(int, BackFilterOrder, TSpectrum::kBackOrder2)
+	/** Whether applying a smoothing in background suppression.
+	 @sa UMF::SpectrumRemoveBackground
+	 */
+	QA_PARAMETER(bool, BackSmoothing, false)
+	/** Smoothing window size used for background suppression.
+	 @sa UMF::SpectrumRemoveBackground
+	 */
+	QA_PARAMETER(int, BackSmoothWindow, TSpectrum::kBackSmoothing3)
+	/** Whether computing Compton edges in background suppression.
+	 @sa UMF::SpectrumRemoveBackground
+	 */
+	QA_PARAMETER(bool, BackCompton, false)
 	
 	QA_CTOR_INHERIT
 	QA_IMPL_CREATE(FeaturesExtractor)
@@ -66,6 +106,10 @@ public:
 Q_SIGNALS:
 	Q_SIGNAL void timeSeries(QVector<double>);
 	Q_SIGNAL void frequencySeries(QVector<double>);
+	Q_SIGNAL void pointSeries(QVector<int>);
+	
+private:
+	static sf::Mutex mutex;
 };
 
 #endif /* FeaturesExtractor_hpp */

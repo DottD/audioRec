@@ -1,134 +1,126 @@
 #include <AA/FeaturesExtractor.hpp>
 
+sf::Mutex AA::FeaturesExtractor::mutex;
+
 void AA::FeaturesExtractor::run(){
-	// Define a function to convert arma array to Qt vector
-	auto armaToQ = [](const arma::vec& vec){
-		QVector<double> qvec;
-		qvec.resize(vec.size());
-		memcpy(qvec.data(), vec.memptr(), vec.size()*sizeof(double));
-		return qvec;
-	};
 	// Open the audio file
-	sf::InputSoundFile file;
-	if (!file.openFromFile(getFile().toStdString())) abort("Unable to open "+getFile());
+	sf::InputSoundFile file; {
+		sf::Lock lock(mutex);
+		if (!file.openFromFile(getFile().toStdString())) abort("Unable to open "+getFile());
+	}
 	// Get audio info
 	const auto sampleCount = file.getSampleCount();
 	setOutSampleRate(file.getSampleRate());
-	// Compute the record length (the first multiple of 1024 greater than the needed value)
-	// Divide by oversampling: during the processing the signal is oversampled
-	setOutRecordLength(ceil(0.5 * (1.0 + sqrt(1.0 + 4.0 * getOutSampleRate() * getMaxFreq())) * 2.0 / 1024.0) * 1024 / getOversampling());
+	// Given the sampling frequency, we can check if maximum frequency required by the user
+	// is compatible with the signal
+	if (getMaximumFrequency() > getOutSampleRate()/2){
+		qInfo() << "Maximum frequency required exceeds Nyquist frequency";
+		setOutTotalRecords(0);
+		setOutFeatures(QVector<double>());
+		setOutRecordLength(0);
+		return;
+	}
+	// Given the desired frequency precision (and the sampling frequency), we can compute
+	// the optimal length a record should have. It will be the lowest power of 2 that is bigger
+	// than the one that yields the desired frequency precision: hence the precision is only
+	// used as a minimum.
+	setOutRecordLength(pow(2, ceil(log2(getOutSampleRate()/getMaximumSpectrumLeakage()))));
+	auto numSamplesPerRecord = getOutRecordLength()*file.getChannelCount();
 	// Get the number of records
 	setOutTotalRecords(ceil(double(sampleCount) / double(getOutRecordLength())));
+//	qInfo() << "File" << QFileInfo(getFile()).baseName() << "has" << getOutTotalRecords() << "records with" << getOutRecordLength() << "for" << getOutSampleRate()/getOutRecordLength() << "Hz of spectral leakage";
+ 	// Initialization of variables and algorithms
+	QVector<double> features;
+	features.reserve(3 * getOutTotalRecords());
+	QVector<sf::Int16> samplesData(numSamplesPerRecord);
+	QVector<double> samples(numSamplesPerRecord);
+	auto channelsReduce = UMF::ReduceChannels::create({
+		{"NumberChannels", file.getChannelCount()},
+		{"Operation", getChannelsOperation()},
+		{"ChannelsArrangement", getChannelsArrangement()}
+	});
+	auto windowing = UMF::Windowing::create({
+		{"Length", getOutRecordLength()},
+		{"Type", getWindowingFunction()}
+	});
+	auto gaussianFilter = UMF::GaussianFilter::create({
+		{"Radius", getGaussianFilterWidth()},
+		{"BorderType", getExtrapolationMethod()}
+	});
+	auto spectrumMagnitude = UMF::SpectrumMagnitude::create();
+	auto backgroundRemove = UMF::SpectrumRemoveBackground::create({
+		{"NumberIterations", getBackIterations()},
+		{"Direction", getBackDirection()},
+		{"FilterOrder", getBackFilterOrder()},
+		{"Smoothing", getBackSmoothing()},
+		{"SmoothWindow", getBackSmoothWindow()},
+		{"Compton", getBackCompton()}
+	});
 	// If a record is selected, change loop limits accordingly
 	unsigned int recIdx = 0;
 	unsigned int maxRecIdx = getOutTotalRecords();
 	if (getSelectRecord() >= 0){
 		recIdx = getSelectRecord();
 		maxRecIdx = recIdx + 1;
-		file.seek(recIdx * getOutRecordLength());
+		file.seek(recIdx * numSamplesPerRecord);
 	}
 	// Scan each record, or the selected one
-	QVector<double> features;
-	sf::Int16* samplesData = new sf::Int16[getOutRecordLength()*file.getChannelCount()];
 	for (; recIdx < maxRecIdx; recIdx++) {
 		// Read a record from file (the last, if incomplete, will be discarded)
-		if (file.read(samplesData, getOutRecordLength()) < getOutRecordLength())
-			break; // end of file reached
-		// Eventually split the channels and compute their mean
-		// samplesData is modified in-place, the first getOutRecordLength()
-		// elements are the average signal between channels, the remainings
-		// are all zeros.
-		for(int k = 0; k < getOutRecordLength(); ++k){
-			sf::Int16 mean = 0;
-			for(int c = 0; c < file.getChannelCount(); ++c){
-				mean += samplesData[file.getChannelCount() * k + c];
-				samplesData[file.getChannelCount() * k + c] = 0;
-			}
-			samplesData[k] = mean / file.getChannelCount();
-		}
-		arma::Col<sf::Int16> integerSamples(samplesData, getOutRecordLength(), false, false);
-		// Convert to a normalized floating point signal
-		arma::vec samples = arma::conv_to<arma::vec>::from(integerSamples) / double(0x7FFF);
-		// Take into account the oversampling parameter
-		samples = oversample(samples, getOversampling());
-		// Windowing (butterworth window)
-		{
-			double buttFiltOrder = 5.0;
-			double cutoff = (1.0-2.0*getButtFilterTail())/2.0 * double(samples.size());
-			double center = double(samples.size()-1)/2.0;
-			for (double k = 0.0; k < samples.size(); k += 1.0)
-				samples[k] *= 1.0 / sqrt(1.0 + pow((k-center)/cutoff, 2.0*buttFiltOrder));
-		}
-		// Binning
-		arma::vec binnedSamples(samples.size()/getBinWidth());
-		for(unsigned int k = 0; k < binnedSamples.size(); k++){
-			// Store the mean in each bin
-			binnedSamples[k] = arma::sum(samples.subvec(k*getBinWidth(), (k+1)*getBinWidth()-1)) / double(getBinWidth());
-		}
-		Q_EMIT timeSeries(armaToQ(binnedSamples));
+		// "read"'s maxCount = maxSamplesPerChannel * numberOfChannels
+		if (file.read(samplesData.data(), numSamplesPerRecord) < numSamplesPerRecord) break; // end of file reached
+		// Convert to double
+		std::transform(samplesData.constBegin(), samplesData.constEnd(), samples.begin(), [](const auto& x){return double(x/double(0x7FFF));});
+		// Split the channels and compute their mean. Then apply a windowing function.
+		channelsReduce->setInSignal(samples);
+		channelsReduce->run();
+		// Windowing
+		windowing->getInput(channelsReduce);
+		windowing->run();
+		// Mean filter (former binning)
+		gaussianFilter->getInput(windowing);
+		gaussianFilter->run();
+		Q_EMIT timeSeries(gaussianFilter->getOutSignal());
 		// Compute the signal spectrum (the Fourier Mathematica command divide by sqrt(N))
-		arma::vec wholeSpectrum = arma::square(arma::abs(arma::fft(binnedSamples)))/double(binnedSamples.size());
-		arma::vec spectrum = wholeSpectrum.subvec(0, wholeSpectrum.size()/2+1); // take relevant part
-		Q_EMIT frequencySeries(armaToQ(spectrum));
+		spectrumMagnitude->getInput(gaussianFilter);
+		spectrumMagnitude->run();
+		Q_EMIT frequencySeries(spectrumMagnitude->getOutSignal());
 		// Estimate the background and subtract it from the spectrum
-		arma::vec estBackSpectrum = backgroundEstimation(spectrum,
-														 getBEMinFilterRad(), getBEMaxPeakWidth(),
-														 getBEDerivDiam(), getBEMaxIterations(),
-														 getBEMaxInconsistency(), getBEMaxDistNodes());
-		// Final gaussian smoothing
-		arma::vec foreSpectrum = spectrum-estBackSpectrum;
-		Q_EMIT frequencySeries(armaToQ(foreSpectrum));
-		// Split the spectrum in three intervals and get the formants
-		double intervalStartBin = round(freq2bin(getOutSampleRate(), getOutRecordLength(), getMinFreq()) / double(getBinWidth()));
-		double intervalWidthBin = floor((foreSpectrum.size()-intervalStartBin)/3);
-		arma::vec4 edges = intervalStartBin + arma::regspace(0, 3) * (intervalWidthBin-1);
-		foreSpectrum = foreSpectrum.subvec(edges(0), edges(3));
-		// Peaks detection
-		std::vector<uint64_t> maxPeaks, minPeaks;
-		std::vector<double> maxPeaksProm, minPeaksProm;
-		peakDetect(foreSpectrum, maxPeaks, maxPeaksProm, minPeaks, minPeaksProm, getPeakRelevance(), getPeakMinVarInfluence(), true);
-		// Compute the maximum value of the peaks
-		double maxPeakValue = 0.0;
-		for (uint64_t& idx: maxPeaks) maxPeakValue = std::max(maxPeakValue, foreSpectrum[idx]);
-		// Remove peaks with smaller values
-		std::vector<uint64_t> acceptedPeaks;
-		acceptedPeaks.reserve(maxPeaks.size());
-		for(uint64_t& idx: maxPeaks){
-			if (foreSpectrum[idx] > maxPeakValue * getPeakHeightThreshold()) acceptedPeaks.push_back(idx);
+		backgroundRemove->getInput(spectrumMagnitude);
+		backgroundRemove->run();
+		Q_EMIT frequencySeries(backgroundRemove->getOutSignal());
+		// Split the selected frequency range in three parts and compute the max in each
+		// For each peak, compute the spectral concentration, that is the ratio between
+		// the peak's energy and the total energy on the interval
+		const auto& spectrum = backgroundRemove->getOutSignal();
+		int bin_start = floor(getMinimumFrequency()/getOutSampleRate()*getOutRecordLength());
+		int bin_end = ceil(getMaximumFrequency()/getOutSampleRate()*getOutRecordLength());
+		int bin_step = ceil((bin_end-bin_start+1)/3.0); // both extrema included
+		QVector<int> Formants;
+		QVector<double> spectralConcentration;
+		for(auto left = spectrum.constBegin() + bin_start, right = left + bin_step;
+			left < spectrum.constBegin() + bin_end + 1; left += bin_step, right += bin_step){
+			auto formant = std::distance(spectrum.constBegin(), std::max_element(left, right));
+			Formants << formant;
+			if(auto totalEnergy = std::reduce(left, right); totalEnergy > 0.0)
+				spectralConcentration << sqrt(spectrum[formant] / totalEnergy);
+			else
+				spectralConcentration << 0.0;
 		}
-		// For each interval sort peaks according to their prominence
-		arma::vec maxProminancePerInterval = arma::zeros<arma::vec>(3);
-		arma::uvec selectedPeaks = arma::zeros<arma::uvec>(3);
-		for(int k = 0; k < 3; k++){
-			// Find the peaks within the interval
-			QVector<QPair<uint64_t,double>> intervalPeaks;
-			intervalPeaks.reserve(acceptedPeaks.size());
-			for(uint64_t n = 0; n < acceptedPeaks.size(); n++) {
-				uint64_t idx = acceptedPeaks[n];
-				if(idx >= edges[k] and idx <= edges[k+1]){
-					intervalPeaks.push_back(qMakePair(idx, foreSpectrum[idx]));
-				}
-			}
-			intervalPeaks.squeeze();
-			// Check whether there is any peak in the interval
-			if (intervalPeaks.empty()) break;
-			// Sort peaks within the interval according to their value
-			std::sort(intervalPeaks.begin(), intervalPeaks.end(), [](const auto& a, const auto& b){
-				return a.second > b.second;
-			});
-			// Store the maximum peak and its prominence (i.e. value difference between max and the average of the others)
-			selectedPeaks[k] = intervalPeaks.front().first;
-			maxProminancePerInterval[k] = std::max(intervalPeaks.front().second, 0.0);
-		}
-		// Check if there is any zero among the prominances of the peaks
-		if (arma::prod(maxProminancePerInterval) == 0) continue; // skip this record
-		// Compute the features
-		double V1 = double(selectedPeaks[1]-selectedPeaks[0])/double(2*intervalWidthBin);
-		double V2 = double(selectedPeaks[2]-selectedPeaks[1])/double(2*intervalWidthBin);
-		double V3 = 1.0 - exp( - pow(arma::prod(maxProminancePerInterval), 1.0/3.0));
+		auto meanSpectralConcentration = std::reduce(spectralConcentration.begin(), spectralConcentration.end());
+		meanSpectralConcentration /= double(spectralConcentration.size());
+		Q_EMIT pointSeries(Formants);
 		// Append to the features array
-		features << V1 << V2 << V3;
+		auto V1 = double(Formants[1]) / double(Formants[0]);
+		auto V2 = double(Formants[2]) / double(Formants[0]);
+		features << V1 << V2 << meanSpectralConcentration;
 	}
-	delete samplesData;
+	features.squeeze();
+	// Normalize weights
+	arma::mat F(features.data(), 3, features.size()/3, false, true);
+	F.row(2) -= F.row(2).min();
+	F.row(2) /= F.row(2).max();
+	F.row(2) %= F.row(2);
+	// Set output
 	setOutFeatures(features);
 }

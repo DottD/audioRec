@@ -12,47 +12,69 @@ set(CAVA_VERSION
 # Add the BUILD_SHARED_LIBS option, that automatically deal with add_library
 option(BUILD_SHARED_LIBS "Whether you want a static or shared build" ON)
 
-# Qt library debug mode on (comment out this line for release mode)
-option(WITH_QT_DEBUG "Whether to link to Qt with debugging symbols" OFF)
-if(WITH_QT_DEBUG)
-  set(DYLD_IMAGE_SUFFIX _debug CACHE STRING "Whether using debug mode or not")
-  message(STATUS "Adding Qt debugging symbols. Suffix: ${DYLD_IMAGE_SUFFIX}")
+# Add a default build type (not sure if working with multiconfig generators)
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING
+      "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS Debug Release RelWithDebInfo MinSizeRel)
+endif(NOT CMAKE_BUILD_TYPE)
+
+# Qt library debug mode (depending on )
+if(CMAKE_BUILD_TYPE EQUAL "Debug")
+  set(DYLD_IMAGE_SUFFIX _debug CACHE STRING "Whether using debug mode or not" FORCE)
 else()
-  unset(DYLD_IMAGE_SUFFIX CACHE)
-  message(STATUS "Without Qt debugging symbols. Suffix: ${DYLD_IMAGE_SUFFIX}")
+  set(DYLD_IMAGE_SUFFIX "" CACHE STRING "Whether using debug mode or not" FORCE)
 endif()
 
 # Find the necessary packages
-set(ALGLIB_FIND_MODULE_PATH "." CACHE PATH "Path to the FindALGLIB.cmake module")
-set(SFML_FIND_MODULE_PATH "." CACHE PATH "Path to the FindSFML.cmake module")
+if(NOT BUILD_SHARED_LIBS)
+  set(SFML_STATIC_LIBRARIES TRUE)
+endif()
+set(ALGLIB_FIND_MODULE_PATH "" CACHE PATH "Path to the FindALGLIB.cmake module")
+set(SFML_FIND_MODULE_PATH "" CACHE PATH "Path to the FindSFML.cmake module")
 set(CMAKE_MODULE_PATH "${ALGLIB_FIND_MODULE_PATH};${SFML_FIND_MODULE_PATH}")
 find_package(Qt5 COMPONENTS Core Gui Widgets Charts Multimedia REQUIRED)
 find_package(Armadillo REQUIRED)
-find_package(SFML COMPONENTS audio system)
+find_package(SFML COMPONENTS audio system REQUIRED)
+if(SFML_FOUND)
+set(SFML_LIBRARIES sfml-audio)
+endif()
 find_package(ALGLIB REQUIRED)
-find_package(ROOT REQUIRED MathCore)
+find_package(ROOT REQUIRED COMPONENTS Spectrum)
 find_package(QAlgorithm REQUIRED)
 
-# Qt library debug mode on (comment out this line for release mode)
-set(DYLD_IMAGE_SUFFIX _debug CACHE STRING "Whether using Qt debug mode or not")
+message(STATUS "Root use file: ${ROOT_USE_FILE}")
+include(${ROOT_USE_FILE})
+string(REGEX REPLACE "-std=c\\+\\+[0-9]+" "" ROOT_CXX_FLAGS ${ROOT_CXX_FLAGS})
+add_definitions(${ROOT_CXX_FLAGS})
 
 # Include the right directories to the search path
 include_directories("${PROJECT_SOURCE_DIR}/Headers" ${PROJECT_BINARY_DIR} ${ARMADILLO_INCLUDE_DIRS} ${ALGLIB_INCLUDES} ${QAlgorithm_INCLUDE_DIRS} ${ROOT_INCLUDE_DIRS})
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Create the mathematical library
 set(CMAKE_AUTOMOC ON)
 file(GLOB_RECURSE UMF_HEADERS Headers/UMF/*.hpp)
 file(GLOB_RECURSE UMF_SOURCES Sources/UMF/*.cpp)
+if(BUILD_SHARED_LIBS)
 add_library(UMF ${UMF_SOURCES} ${UMF_HEADERS}) # Useful Mathematical Functions
+else()
+add_library(UMF STATIC ${UMF_SOURCES} ${UMF_HEADERS}) # Useful Mathematical Functions
+endif()
 target_link_libraries(UMF ${ARMADILLO_LIBRARIES} ${ALGLIB_LIBRARIES} ${QAlgorithm_LIBRARIES} ${ROOT_LIBRARIES} Qt5::Core)
-set_property(TARGET UMF PROPERTY CXX_STANDARD 14)
 
 # Create the Audio Analysis library
 file(GLOB_RECURSE AA_HEADERS Headers/AA/*.hpp)
 file(GLOB_RECURSE AA_SOURCES Sources/AA/*.cpp)
-add_library(AA ${AA_SOURCES} ${AA_HEADERS})
+if(BUILD_SHARED_LIBS)
+add_library(AA ${AA_SOURCES} ${AA_HEADERS}) # Audio Analysis
+else()
+add_library(AA ${AA_SOURCES} ${AA_HEADERS}) # Audio Analysis
+endif()
 target_link_libraries(AA ${ARMADILLO_LIBRARIES} ${ALGLIB_LIBRARIES} ${SFML_LIBRARIES} ${QAlgorithm_LIBRARIES} ${ROOT_LIBRARIES} Qt5::Core Qt5::Gui Qt5::Widgets Qt5::Multimedia UMF)
-set_property(TARGET AA PROPERTY CXX_STANDARD 14)
 
 # Create the executable with GUI
 file(GLOB_RECURSE UI_FILES Resources/GUI/*.ui)
